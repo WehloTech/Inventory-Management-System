@@ -1,0 +1,13 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PageController;
+Route::get('/ping', function () {
+    return response()->json(['message' => 'API works']);
+});
+
+Route::get('/users', [UserController::class,'index']);
+
+Route::apiResource('products', ProductController::class);
