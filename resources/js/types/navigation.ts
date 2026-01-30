@@ -8,7 +8,8 @@ export type BreadcrumbItem = {
 
 export type NavItem = {
     title: string;
-    href: NonNullable<InertiaLinkProps['href']>;
+    href?: NonNullable<InertiaLinkProps['href']>;  // Make it optional
     icon?: LucideIcon | null;
     isActive?: boolean;
+    submenu?: NavItem[];  // Add this line
 };
