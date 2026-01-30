@@ -47,8 +47,4 @@ class ProductController extends Controller
 
         return response()->json(null, 204);
     }
-    public function products()
-    {
-        return Inertia::render('Products'); // This maps to resources/js/pages/Products.tsx
-    }
 }

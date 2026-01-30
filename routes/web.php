@@ -12,6 +12,12 @@ Route::get('/', function () {
 
 Route::get('/products', [PageController::class, 'products']);
 
+// Create page
+Route::get('/products/create', [PageController::class, 'create']);
+
+// Edit page
+Route::get('/products/{id}/edit', [PageController::class, 'edit']);
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
