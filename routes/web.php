@@ -18,22 +18,26 @@ Route::prefix('usher')->group(function () {
     Route::get('/master-list', function () {
         return Inertia::render('USHER/MasterList');
     })->name('usher.master-list');
-    
-    Route::get('/stock-out', function () {
-        return Inertia::render('USHER/StockOutU');  // ← Changed
-    })->name('usher.stock-out');
-    
+
     Route::get('/stock-in', function () {
-        return Inertia::render('USHER/StockInU');  // ← Changed
+        return Inertia::render('USHER/StockInU');  
     })->name('usher.stock-in');
     
+    Route::get('/stock-out', function () {
+        return Inertia::render('USHER/StockOutU');  
+    })->name('usher.stock-out');
+    
     Route::get('/damaged', function () {
-        return Inertia::render('USHER/StockDamageU');  // ← Changed
+        return Inertia::render('USHER/StockDamageU');  
     })->name('usher.damaged');
     
     Route::get('/purchase-order', function () {
-        return Inertia::render('USHER/PurchaseOrder');
+        return Inertia::render('USHER/PurchaseOrderU');
     })->name('usher.purchase-order');
+    
+    Route::get('/purchase-request', function () {
+        return Inertia::render('USHER/PurchaseRequestU');
+    })->name('usher.purchase-request');
     
     Route::get('/deployment', function () {
         return Inertia::render('USHER/Deployment');

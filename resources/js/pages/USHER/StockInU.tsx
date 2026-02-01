@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import type { NavItem } from '@/types';
-import { Package, List, LogOut, LogIn, AlertTriangle, ShoppingCart, Truck, Search, Plus, Calendar } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 
 const StockIn = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -11,21 +10,6 @@ const StockIn = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-
-  const navItems: NavItem[] = [
-    {
-      title: 'Inventory',
-      icon: Package,
-      submenu: [
-        { title: 'Master List', href: '/usher/master-list', icon: List },
-        { title: 'Stock Out', href: '/usher/stock-out', icon: LogOut },
-        { title: 'Stock In', href: '/usher/stock-in', icon: LogIn },
-        { title: 'Damaged', href: '/usher/damaged', icon: AlertTriangle },
-      ],
-    },
-    { title: 'Purchase Order', href: '/usher/purchase-order', icon: ShoppingCart },
-    { title: 'Deployment', href: '/usher/deployment', icon: Truck },
-  ];
 
   const stockInTransactions = [
     {
@@ -62,7 +46,7 @@ const StockIn = () => {
     <>
       <Head title="Stock In" />
       <SidebarProvider>
-        <USHERSidebar items={navItems} />
+        <USHERSidebar />
         <main className="flex-1 w-full overflow-hidden">
           <div className="flex items-center gap-4 p-4 border-b bg-white">
             <SidebarTrigger />
