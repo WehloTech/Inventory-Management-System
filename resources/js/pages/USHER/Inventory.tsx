@@ -1,6 +1,7 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   SidebarProvider,
   SidebarTrigger,
@@ -17,9 +18,12 @@ const Inventory: InventoryPageComponent = () => {
       <SidebarProvider>
         <USHERSidebar />
         <main className="flex-1 w-full overflow-hidden">
-          <div className="flex items-center gap-4 p-4 border-b">
-            <SidebarTrigger />
-            <h1 className="text-xl font-bold">USHER Inventory System</h1>
+          <div className="flex items-center justify-between gap-4 p-4 border-b">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger />
+              <h1 className="text-xl font-bold">USHER Inventory System</h1>
+            </div>
+            <ThemeToggle />
           </div>
           
           <div className="w-full h-full flex flex-col items-center justify-start p-6 pt-20">
