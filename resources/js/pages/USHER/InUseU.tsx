@@ -1,83 +1,74 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import {
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 import { Search, Plus } from 'lucide-react';
 
-interface StockDamagePageComponent extends React.FC {
+interface InUsePageComponent extends React.FC {
   layout?: any;
 }
 
-interface DamagedItem {
+interface InUseItem {
   id: number;
   itemName: string;
   serialNumber: string;
-  date: string;
-  quantity: number;
-  reason: string;
+  assignedTo: string;
+  dateAssigned: string;
+  location: string;
   status: string;
 }
 
-const StockDamage: StockDamagePageComponent = () => {
+const InUse: InUsePageComponent = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const damagedItems: DamagedItem[] = [
+  const inUseItems: InUseItem[] = [
     {
       id: 1,
       itemName: 'Laptop',
       serialNumber: 'DL123456',
-      date: '2026-01-30',
-      quantity: 1,
-      reason: 'Screen damage',
-      status: 'Under Review',
+      assignedTo: 'John Doe',
+      dateAssigned: '2026-01-15',
+      location: 'Office A',
+      status: 'Active',
     },
     {
       id: 2,
       itemName: 'Monitor',
       serialNumber: 'MON789456',
-      date: '2026-01-28',
-      quantity: 1,
-      reason: 'Power issue',
-      status: 'Discarded',
+      assignedTo: 'Jane Smith',
+      dateAssigned: '2026-01-10',
+      location: 'Office B',
+      status: 'Active',
     },
     {
       id: 3,
       itemName: 'Keyboard',
       serialNumber: 'KEY456123',
-      date: '2026-01-25',
-      quantity: 2,
-      reason: 'Keys broken',
-      status: 'Repairable',
+      assignedTo: 'Mike Johnson',
+      dateAssigned: '2026-01-20',
+      location: 'Office A',
+      status: 'In Use',
     },
   ];
 
-  const filteredItems = damagedItems.filter((item) =>
+  const filteredItems = inUseItems.filter((item) =>
     item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.serialNumber.toLowerCase().includes(searchQuery.toLowerCase())
+    item.serialNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.assignedTo.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Under Review':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-      case 'Discarded':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
-      case 'Repairable':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
-    }
-  };
 
   return (
     <>
-      <Head title="Damaged Items" />
+      <Head title="In Use" />
       <SidebarProvider>
         <USHERSidebar />
         <main className="flex-1 w-full overflow-hidden flex flex-col">
           <div className="flex items-center gap-4 p-4 border-b">
             <SidebarTrigger />
-            <h1 className="text-xl font-bold">DAMAGED</h1>
+            <h1 className="text-xl font-bold">IN USE</h1>
           </div>
           
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -85,10 +76,10 @@ const StockDamage: StockDamagePageComponent = () => {
             <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
               <div className="text-center">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  DAMAGED ITEMS
+                  IN USE ITEMS
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Track and manage damaged inventory items
+                  Track all items currently in use
                 </p>
               </div>
             </div>
@@ -102,7 +93,7 @@ const StockDamage: StockDamagePageComponent = () => {
                     <Search className="absolute left-3 top-3 text-gray-400" size={20} />
                     <input
                       type="text"
-                      placeholder="Search by item name or serial number..."
+                      placeholder="Search by item name, serial number, or assigned to..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -110,7 +101,7 @@ const StockDamage: StockDamagePageComponent = () => {
                   </div>
                   <button className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
                     <Plus size={20} />
-                    Report Damage
+                    Add Item
                   </button>
                 </div>
 
@@ -126,16 +117,16 @@ const StockDamage: StockDamagePageComponent = () => {
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[110px]">
                             Serial #
                           </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[120px]">
+                            Assigned To
+                          </th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[110px]">
-                            Date
+                            Date Assigned
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[100px]">
+                            Location
                           </th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[80px]">
-                            Quantity
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[130px]">
-                            Reason
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[110px]">
                             Status
                           </th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[120px]">
@@ -144,6 +135,7 @@ const StockDamage: StockDamagePageComponent = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        {/* Render actual items only */}
                         {filteredItems.map((item) => (
                           <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors h-20">
                             <td className="px-3 py-4 text-sm font-medium text-gray-900 dark:text-white">
@@ -153,25 +145,23 @@ const StockDamage: StockDamagePageComponent = () => {
                               {item.serialNumber}
                             </td>
                             <td className="px-3 py-4 text-sm text-gray-600 dark:text-gray-300">
-                              {item.date}
-                            </td>
-                            <td className="px-3 py-4 text-sm">
-                              <span className="px-2 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
-                                {item.quantity}
-                              </span>
+                              {item.assignedTo}
                             </td>
                             <td className="px-3 py-4 text-sm text-gray-600 dark:text-gray-300">
-                              {item.reason}
+                              {item.dateAssigned}
+                            </td>
+                            <td className="px-3 py-4 text-sm text-gray-600 dark:text-gray-300">
+                              {item.location}
                             </td>
                             <td className="px-3 py-4 text-sm">
-                              <span className={`px-2 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full ${getStatusColor(item.status)}`}>
+                              <span className="px-2 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                                 {item.status}
                               </span>
                             </td>
                             <td className="px-3 py-4 text-sm text-blue-600 dark:text-blue-400">
                               <button className="hover:underline">Edit</button>
-                              <span className="mx-2 text-gray-300 dark:text-gray-600">|</span>
-                              <button className="hover:underline">View</button>
+                              <span className="mx-2 text-gray-300">|</span>
+                              <button className="text-red-600 dark:text-red-400 hover:underline">Return</button>
                             </td>
                           </tr>
                         ))}
@@ -179,12 +169,6 @@ const StockDamage: StockDamagePageComponent = () => {
                     </table>
                   </div>
                 </div>
-
-                {filteredItems.length === 0 && (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    No damaged items found.
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -194,4 +178,4 @@ const StockDamage: StockDamagePageComponent = () => {
   );
 };
 
-export default StockDamage;
+export default InUse;

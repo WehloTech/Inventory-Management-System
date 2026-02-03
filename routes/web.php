@@ -27,6 +27,10 @@ Route::prefix('usher')->group(function () {
         return Inertia::render('USHER/StockOutU');  
     })->name('usher.stock-out');
     
+    Route::get('/in-use', function () {
+        return Inertia::render('USHER/InUseU');  
+    })->name('usher.in-use');
+    
     Route::get('/damaged', function () {
         return Inertia::render('USHER/StockDamageU');  
     })->name('usher.damaged');
