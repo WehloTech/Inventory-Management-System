@@ -11,45 +11,45 @@ const LandingPage: LandingPageComponent = () => {
       id: 'usher', 
       label: 'USHER', 
       path: '/usher/inventory',
-      bgColor: 'bg-purple-600',
-      icon: '👤'
+      bgColor: 'bg-white',
+      icon: '/usher.png'  // Changed from /images/usher.png
     },
     { 
       id: 'usherette', 
       label: 'USHERETTE', 
       path: '/usherette',
-      bgColor: 'bg-cyan-500',
-      icon: '😊'
+      bgColor: 'bg-white',
+      icon: '/usherrete.jpg'  // Changed from /images/usherrete.jpg
     },
     { 
       id: 'wehlo', 
       label: 'WEHLO', 
       path: '/wehlo',
-      bgColor: 'bg-lime-500',
-      icon: '😊'
+      bgColor: 'bg-white',
+      icon: '/wehlo.png'  // Changed from /images/wehlo.png
     },
     { 
       id: 'hoclomac', 
       label: 'HOCLOMAC', 
       path: '/hoclomac',
-      bgColor: 'bg-red-500',
-      icon: '😊'
+      bgColor: 'bg-white',
+      icon: '/hoclomac.jpg'  // Changed from /images/hoclomac.jpg
     },
     { 
       id: 'all', 
       label: 'ALL', 
       path: '/all',
-      bgColor: 'bg-blue-600',
-      icon: '😊'
+      bgColor: 'bg-white',
+      icon: '/ALL.png'  // Changed from /images/ALL.png
     },
   ];
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8">
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-8">
       <div className="w-full max-w-6xl">
         {/* Heading */}
-        <h1 className="text-5xl font-bold text-white text-center mb-16">
-          Choose Your Profile
+        <h1 className="text-5xl font-bold text-black text-center mb-16">
+          Choose Inventory 
         </h1>
 
         {/* Profile Grid */}
@@ -63,24 +63,24 @@ const LandingPage: LandingPageComponent = () => {
               <div className="flex flex-col items-center gap-4">
                 {/* Profile Card */}
                 <div
-                  className={`${system.bgColor} w-40 h-40 rounded-lg flex items-center justify-center text-7xl shadow-lg group-hover:shadow-2xl transition-all duration-200 group-hover:scale-105 group-hover:border-4 group-hover:border-white`}
+                  className={`${system.bgColor} w-40 h-40 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-200 group-hover:scale-105 group-hover:border-4 group-hover:border-blue-400`}
                 >
-                  {/* Placeholder Icon - Replace with actual image */}
-                  <div className="w-full h-full rounded-lg bg-black bg-opacity-20 flex items-center justify-center">
-                    <span className="text-6xl">📺</span>
-                  </div>
+                  {/* Actual Image */}
+                  <img 
+                    src={system.icon} 
+                    alt={system.label}
+                    className="w-24 h-24 object-contain"
+                  />
                 </div>
 
                 {/* Label */}
-                <p className="text-gray-400 text-lg font-medium group-hover:text-white transition-colors duration-200">
+                <p className="text-black text-lg font-medium group-hover:text-gray-700 transition-colors duration-200">
                   {system.label}
                 </p>
               </div>
             </Link>
           ))}
         </div>
-
-
       </div>
     </div>
   );
