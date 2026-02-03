@@ -42,6 +42,11 @@ export const usherNavItems: NavItem[] = [
         icon: LogOut,
       },
       {
+        title: 'In Use',
+        href: '/usher/in-use',
+        icon: AlertTriangle,
+      },
+      {
         title: 'Damaged',
         href: '/usher/damaged',
         icon: AlertTriangle,
