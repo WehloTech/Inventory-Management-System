@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class StockLog extends Model
 {
-
+    const TYPES = ['IN', 'OUT', 'DAMAGE', 'IN USE'];
 
     protected $fillable = [
         'item_id',
@@ -15,9 +15,4 @@ class StockLog extends Model
         'date',
         'notes'
     ];
-
-    public function item()
-    {
-        return $this->belongsTo(Item::class, 'item_id');
-    }
 }
