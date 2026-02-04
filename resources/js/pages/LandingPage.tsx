@@ -11,44 +11,44 @@ const LandingPage: LandingPageComponent = () => {
       id: 'usher', 
       label: 'USHER', 
       path: '/usher/inventory',
-      bgColor: 'bg-white',
-      icon: '/usher.png'  // Changed from /images/usher.png
+      bgColor: 'bg-slate-800',
+      icon: '/usher.png'
     },
     { 
       id: 'usherette', 
       label: 'USHERETTE', 
       path: '/usherette',
-      bgColor: 'bg-white',
-      icon: '/usherrete.jpg'  // Changed from /images/usherrete.jpg
+      bgColor: 'bg-slate-800',
+      icon: '/usherrete.jpg'
     },
     { 
       id: 'wehlo', 
       label: 'WEHLO', 
       path: '/wehlo',
-      bgColor: 'bg-white',
-      icon: '/wehlo.png'  // Changed from /images/wehlo.png
+      bgColor: 'bg-slate-800',
+      icon: '/wehlo.png'
     },
     { 
       id: 'hoclomac', 
       label: 'HOCLOMAC', 
       path: '/hoclomac',
-      bgColor: 'bg-white',
-      icon: '/hoclomac.jpg'  // Changed from /images/hoclomac.jpg
+      bgColor: 'bg-slate-800',
+      icon: '/hoclomac.jpg'
     },
     { 
       id: 'all', 
       label: 'ALL', 
       path: '/all',
-      bgColor: 'bg-white',
-      icon: '/ALL.png'  // Changed from /images/ALL.png
+      bgColor: 'bg-slate-800',
+      icon: '/ALL.png'
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-8">
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8">
       <div className="w-full max-w-6xl">
         {/* Heading */}
-        <h1 className="text-5xl font-bold text-black text-center mb-16">
+        <h1 className="text-5xl font-bold text-white text-center mb-16">
           Choose Inventory 
         </h1>
 
@@ -63,7 +63,7 @@ const LandingPage: LandingPageComponent = () => {
               <div className="flex flex-col items-center gap-4">
                 {/* Profile Card */}
                 <div
-                  className={`${system.bgColor} w-40 h-40 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-200 group-hover:scale-105 group-hover:border-4 group-hover:border-blue-400`}
+                  className={`${system.bgColor} w-40 h-40 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-200 group-hover:scale-105 group-hover:border-4 group-hover:border-cyan-400`}
                 >
                   {/* Actual Image */}
                   <img 
@@ -74,7 +74,7 @@ const LandingPage: LandingPageComponent = () => {
                 </div>
 
                 {/* Label */}
-                <p className="text-black text-lg font-medium group-hover:text-gray-700 transition-colors duration-200">
+                <p className="text-gray-200 text-lg font-medium group-hover:text-cyan-400 transition-colors duration-200">
                   {system.label}
                 </p>
               </div>
