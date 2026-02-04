@@ -1,54 +1,64 @@
 import React from 'react';
 import { Link } from '@inertiajs/react';
+import { ThemeToggle } from '../components/themetoggle';
+import { useAppearance } from '../hooks/use-appearance';
 
 interface LandingPageComponent extends React.FC {
   layout?: undefined;
 }
 
 const LandingPage: LandingPageComponent = () => {
+  const { resolvedAppearance } = useAppearance();
+  const isDark = resolvedAppearance === 'dark';
+
   const systems = [
     { 
       id: 'usher', 
       label: 'USHER', 
       path: '/usher/inventory',
-      bgColor: 'bg-slate-800',
       icon: '/usher.png'
     },
     { 
       id: 'usherette', 
       label: 'USHERETTE', 
       path: '/usherette',
-      bgColor: 'bg-slate-800',
       icon: '/usherrete.jpg'
     },
     { 
       id: 'wehlo', 
       label: 'WEHLO', 
       path: '/wehlo',
-      bgColor: 'bg-slate-800',
       icon: '/wehlo.png'
     },
     { 
       id: 'hoclomac', 
       label: 'HOCLOMAC', 
       path: '/hoclomac',
-      bgColor: 'bg-slate-800',
       icon: '/hoclomac.jpg'
     },
     { 
       id: 'all', 
       label: 'ALL', 
       path: '/all',
-      bgColor: 'bg-slate-800',
       icon: '/ALL.png'
     },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8">
+    <div className={`min-h-screen flex flex-col items-center justify-center p-8 transition-colors duration-300 relative ${
+      isDark ? 'bg-slate-950' : 'bg-gray-100'
+    }`}>
+      {/* Theme Toggle Button */}
+      <div className="absolute top-8 right-8">
+        <ThemeToggle />
+      </div>
+
       <div className="w-full max-w-6xl">
+
         {/* Heading */}
-        <h1 className="text-5xl font-bold text-white text-center mb-16">
+        <h1 className={`text-5xl font-bold text-center mb-16 transition-colors duration-300 ${
+          isDark ? 'text-white' : 'text-black'
+        }`}>
           Choose Inventory 
         </h1>
 
@@ -63,7 +73,11 @@ const LandingPage: LandingPageComponent = () => {
               <div className="flex flex-col items-center gap-4">
                 {/* Profile Card */}
                 <div
-                  className={`${system.bgColor} w-40 h-40 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-200 group-hover:scale-105 group-hover:border-4 group-hover:border-cyan-400`}
+                  className={`w-40 h-40 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-200 group-hover:scale-105 group-hover:border-4 ${
+                    isDark 
+                      ? 'bg-slate-800 group-hover:border-cyan-400' 
+                      : 'bg-white group-hover:border-blue-400'
+                  }`}
                 >
                   {/* Actual Image */}
                   <img 
@@ -74,7 +88,11 @@ const LandingPage: LandingPageComponent = () => {
                 </div>
 
                 {/* Label */}
-                <p className="text-gray-200 text-lg font-medium group-hover:text-cyan-400 transition-colors duration-200">
+                <p className={`text-lg font-medium transition-colors duration-200 ${
+                  isDark 
+                    ? 'text-gray-200 group-hover:text-cyan-400' 
+                    : 'text-black group-hover:text-blue-600'
+                }`}>
                   {system.label}
                 </p>
               </div>
