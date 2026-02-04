@@ -73,10 +73,10 @@ const LandingPage: LandingPageComponent = () => {
               <div className="flex flex-col items-center gap-4">
                 {/* Profile Card */}
                 <div
-                  className={`w-40 h-40 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-200 group-hover:scale-105 group-hover:border-4 ${
+                  className={`w-40 h-40 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110 group-hover:border-4 ${
                     isDark 
-                      ? 'bg-slate-800 group-hover:border-cyan-400' 
-                      : 'bg-white group-hover:border-blue-400'
+                      ? 'bg-slate-800 group-hover:border-green-400' 
+                      : 'bg-white group-hover:border-green-500'
                   }`}
                 >
                   {/* Actual Image */}
@@ -90,8 +90,8 @@ const LandingPage: LandingPageComponent = () => {
                 {/* Label */}
                 <p className={`text-lg font-medium transition-colors duration-200 ${
                   isDark 
-                    ? 'text-gray-200 group-hover:text-cyan-400' 
-                    : 'text-black group-hover:text-blue-600'
+                    ? 'text-gray-200 group-hover:text-green-400' 
+                    : 'text-black group-hover:text-green-600'
                 }`}>
                   {system.label}
                 </p>
