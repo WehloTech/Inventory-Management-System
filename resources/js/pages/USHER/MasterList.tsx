@@ -13,7 +13,7 @@ interface SerialItem {
   serialNumber: string;
   supplier: string;
 }
-
+// This is a test comment for Pull Request
 interface AlphabetSubcategory {
   letter: string;
   itemName: string;
@@ -183,6 +183,42 @@ const MasterList: MasterListPageComponent = () => {
     {
       id: 6,
       boxNumber: 'BOX-006',
+      subcategories: [
+        {
+          letter: 'A',
+          itemName: 'Monitor Stand',
+          description: 'Adjustable Monitor Stand',
+          unit: 'pcs',
+          serialItems: [],
+          stockIn: 8,
+          stockOut: 2,
+          damageStock: 0,
+          inUse: 2,
+          currentStock: 6,
+        },
+      ],
+    },
+        {
+      id: 7,
+      boxNumber: 'BOX-007',
+      subcategories: [
+        {
+          letter: 'A',
+          itemName: 'Monitor Stand',
+          description: 'Adjustable Monitor Stand',
+          unit: 'pcs',
+          serialItems: [],
+          stockIn: 8,
+          stockOut: 2,
+          damageStock: 0,
+          inUse: 2,
+          currentStock: 6,
+        },
+      ],
+    },
+            {
+      id: 8,
+      boxNumber: 'BOX-007',
       subcategories: [
         {
           letter: 'A',
