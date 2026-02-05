@@ -460,7 +460,7 @@ const MasterList: MasterListPageComponent = () => {
                     onClick={() => setIsBoxModalOpen(true)}
                     className="px-6 py-2.5 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
                   >
-                    Add box
+                    Add Box
                   </button>
                 </div>
 
@@ -629,7 +629,7 @@ const MasterList: MasterListPageComponent = () => {
                   onClick={handleAddBox}
                   className="px-8 sm:px-12 py-3 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base"
                 >
-                  Add box
+                  Add Box
                 </button>
               </div>
             </div>
