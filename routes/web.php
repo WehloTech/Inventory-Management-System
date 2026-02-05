@@ -48,6 +48,8 @@ Route::prefix('usher')->group(function () {
     })->name('usher.deployment');
 });
 
+
+
 Route::get('/products', [PageController::class, 'products']);
 
 // Create page
@@ -61,5 +63,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
 });
+
+Route::get('/mock-inventory/usher-page', function () {
+    return Inertia::render('MockInventory/UsherPage');
+})->name('mock-inventory.usher-page');
 
 require __DIR__.'/settings.php';

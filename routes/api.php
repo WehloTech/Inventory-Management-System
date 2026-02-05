@@ -15,5 +15,8 @@ Route::get('/users', [UserController::class,'index']);
 
 Route::apiResource('products', ProductController::class);
 */
+// Add the new Masterlist API routes
+require __DIR__.'/masterlistAPI.php';
 
+// Add the new Masterlist API routes
 require __DIR__.'/inventoryAPI.php';
