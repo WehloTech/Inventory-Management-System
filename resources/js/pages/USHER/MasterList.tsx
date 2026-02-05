@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
 import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Search, Plus, X, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, Plus, X, Eye, Trash2 } from 'lucide-react';
 
 interface SerialItem {
   id: number;
@@ -41,12 +42,12 @@ const MasterList: MasterListPageComponent = () => {
   const [isBoxModalOpen, setIsBoxModalOpen] = useState(false);
   const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] = useState(false);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
-  const [selectedBoxForSerial, setSelectedBoxForSerial] = useState<{ boxId: number; letter: string } | null>(null);
-  const [isSerialModalOpen, setIsSerialModalOpen] = useState(false);
-  const [expandedBoxes, setExpandedBoxes] = useState<Set<number>>(new Set());
-  const [expandedSubcategories, setExpandedSubcategories] = useState<Set<string>>(new Set());
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedBoxForDetail, setSelectedBoxForDetail] = useState<InventoryBox | null>(null);
   const [currentBoxId, setCurrentBoxId] = useState<number | null>(null);
   const [currentSubcategoryLetter, setCurrentSubcategoryLetter] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 7;
 
   const [inventoryBoxes, setInventoryBoxes] = useState<InventoryBox[]>([
     {
@@ -143,6 +144,60 @@ const MasterList: MasterListPageComponent = () => {
         },
       ],
     },
+    {
+      id: 4,
+      boxNumber: 'BOX-004',
+      subcategories: [
+        {
+          letter: 'A',
+          itemName: 'USB Cable',
+          description: 'Type-C USB Cable',
+          unit: 'pcs',
+          serialItems: [],
+          stockIn: 50,
+          stockOut: 20,
+          damageStock: 5,
+          inUse: 15,
+          currentStock: 35,
+        },
+      ],
+    },
+    {
+      id: 5,
+      boxNumber: 'BOX-005',
+      subcategories: [
+        {
+          letter: 'A',
+          itemName: 'Power Adapter',
+          description: '65W Power Adapter',
+          unit: 'pcs',
+          serialItems: [],
+          stockIn: 12,
+          stockOut: 4,
+          damageStock: 1,
+          inUse: 3,
+          currentStock: 8,
+        },
+      ],
+    },
+    {
+      id: 6,
+      boxNumber: 'BOX-006',
+      subcategories: [
+        {
+          letter: 'A',
+          itemName: 'Monitor Stand',
+          description: 'Adjustable Monitor Stand',
+          unit: 'pcs',
+          serialItems: [],
+          stockIn: 8,
+          stockOut: 2,
+          damageStock: 0,
+          inUse: 2,
+          currentStock: 6,
+        },
+      ],
+    },
   ]);
 
   const [boxFormData, setBoxFormData] = useState({
@@ -183,6 +238,11 @@ const MasterList: MasterListPageComponent = () => {
     );
   });
 
+  // Pagination
+  const totalPages = Math.ceil(filteredBoxes.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedBoxes = filteredBoxes.slice(startIndex, startIndex + itemsPerPage);
+
   const handleBoxInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setBoxFormData((prev) => ({
@@ -218,7 +278,13 @@ const MasterList: MasterListPageComponent = () => {
       subcategories: [],
     };
 
-    setInventoryBoxes([...inventoryBoxes, newBox]);
+    const newBoxList = [...inventoryBoxes, newBox];
+    setInventoryBoxes(newBoxList);
+    
+    // Calculate which page the new box will be on
+    const newTotalPages = Math.ceil(newBoxList.length / itemsPerPage);
+    setCurrentPage(newTotalPages);
+    
     setBoxFormData({
       boxNumber: '',
     });
@@ -233,11 +299,7 @@ const MasterList: MasterListPageComponent = () => {
     setInventoryBoxes((prevBoxes) =>
       prevBoxes.map((box) => {
         if (box.id === currentBoxId) {
-          // Get the next letter (A, B, C, etc.)
-          const existingLetters = box.subcategories.map((sub) => sub.letter);
-          const nextLetter = String.fromCharCode(
-            65 + box.subcategories.length
-          ); // A=65 in ASCII
+          const nextLetter = String.fromCharCode(65 + box.subcategories.length);
 
           const newSubcategory: AlphabetSubcategory = {
             letter: nextLetter,
@@ -344,290 +406,166 @@ const MasterList: MasterListPageComponent = () => {
     setIsSubcategoryModalOpen(true);
   };
 
-  const openAddItemModal = (boxId: number, letter: string) => {
-    setCurrentBoxId(boxId);
-    setCurrentSubcategoryLetter(letter);
-    setItemFormData({
-      unit: 'pcs',
-      serialNumber: '',
-      supplier: '',
-      stockIn: 0,
-      stockOut: 0,
-      damageStock: 0,
-      inUse: 0,
-    });
-    setIsItemModalOpen(true);
+  const openDetailModal = (box: InventoryBox) => {
+    setSelectedBoxForDetail(box);
+    setIsDetailModalOpen(true);
   };
 
-  const toggleBoxExpanded = (boxId: number) => {
-    setExpandedBoxes((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(boxId)) {
-        newSet.delete(boxId);
-      } else {
-        newSet.add(boxId);
+  const handleDeleteBox = (boxId: number) => {
+    if (confirm('Are you sure you want to delete this box?')) {
+      const newBoxList = inventoryBoxes.filter((b) => b.id !== boxId);
+      setInventoryBoxes(newBoxList);
+      
+      // Recalculate total pages after deletion
+      const newTotalPages = Math.ceil(newBoxList.length / itemsPerPage);
+      
+      // If current page is greater than new total pages, go to the last page
+      if (currentPage > newTotalPages) {
+        setCurrentPage(Math.max(1, newTotalPages));
       }
-      return newSet;
-    });
+    }
   };
-
-  const toggleSubcategoryExpanded = (boxId: number, letter: string) => {
-    const key = `${boxId}-${letter}`;
-    setExpandedSubcategories((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(key)) {
-        newSet.delete(key);
-      } else {
-        newSet.add(key);
-      }
-      return newSet;
-    });
-  };
-
-  const openSerialModal = (boxId: number, letter: string) => {
-    setSelectedBoxForSerial({ boxId, letter });
-    setIsSerialModalOpen(true);
-  };
-
-  const currentBox = currentBoxId ? inventoryBoxes.find((b) => b.id === currentBoxId) : null;
-  const currentSubcategory =
-    currentBox && currentSubcategoryLetter
-      ? currentBox.subcategories.find((sub) => sub.letter === currentSubcategoryLetter)
-      : null;
 
   return (
     <>
       <Head title="Master List" />
       <SidebarProvider>
         <USHERSidebar />
-        <main className="flex-1 w-full overflow-hidden flex flex-col">
-          <div className="flex items-center gap-4 p-4 border-b">
+        <main className="flex-1 w-full overflow-hidden flex flex-col bg-white dark:bg-gray-900">
+          <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
             <SidebarTrigger />
-            <h1 className="text-xl font-bold">MASTER LIST</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Masterlist</h1>
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Content */}
-            <div className="flex-1 overflow-auto p-6 flex flex-col">
+            <div className="flex-1 overflow-auto p-4 sm:p-6 flex flex-col bg-white dark:bg-gray-900">
               <div className="w-full flex flex-col flex-1">
-                {/* Header */}
-                <div className="mb-6">
-                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 rounded-lg">
-                    <div className="text-center">
-                      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                        BOX INVENTORY
-                      </h1>
-                      <p className="text-gray-600 dark:text-gray-400">
-                        Manage Inventory by Box and Serial Numbers
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Search and Add Bar */}
-                <div className="flex gap-4 mb-6 flex-col lg:flex-row">
+                <div className="flex gap-3 sm:gap-4 mb-6 flex-col sm:flex-row items-stretch sm:items-center">
                   <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
                     <input
                       type="text"
-                      placeholder="Search by item name, box number, serial number, or supplier..."
+                      placeholder="Search Box"
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full pl-12 pr-4 py-2.5 border-2 border-gray-400 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors"
                     />
                   </div>
                   <button
                     onClick={() => setIsBoxModalOpen(true)}
-                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                    className="px-6 py-2.5 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
                   >
-                    <Plus size={20} />
-                    Add Box
+                    Add box
                   </button>
                 </div>
 
-                {/* Boxes List */}
-                <div className="space-y-4">
-                  {filteredBoxes.map((box) => (
-                    <div
-                      key={box.id}
-                      className="bg-white dark:bg-gray-800 shadow border border-gray-200 dark:border-gray-700 overflow-hidden rounded-lg"
-                    >
-                      {/* Box Header */}
-                      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-4 flex-1">
-                            <button
-                              onClick={() => toggleBoxExpanded(box.id)}
-                              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                            >
-                              <ChevronDown
-                                size={20}
-                                className={`transform transition-transform ${
-                                  expandedBoxes.has(box.id) ? 'rotate-180' : ''
-                                }`}
-                              />
-                            </button>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                                  {box.boxNumber}
-                                </h3>
-                                <span className="text-xs font-medium px-2 py-1 bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded">
-                                  {box.subcategories.length} subcategories
-                                </span>
+                {/* Table - Responsive */}
+                <div className="overflow-x-auto border-2 border-gray-900 dark:border-gray-100 rounded-lg bg-white dark:bg-gray-800">
+                  <table className="w-full min-w-full">
+                    {/* Table Header */}
+<thead>
+  <tr className="border-b-2 border-gray-900 dark:border-gray-100">
+    <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+      Box No.
+    </th>
+    <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+      Category Quantity
+    </th>
+    <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
+      Action
+    </th>
+  </tr>
+</thead>
+
+                    {/* Table Body */}
+                    <tbody>
+                      {paginatedBoxes.length > 0 ? (
+                        paginatedBoxes.map((box, index) => (
+                          <tr
+                            key={box.id}
+                            className="border-b-2 border-gray-900 dark:border-gray-100 last:border-b-0 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          >
+<td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+  {box.boxNumber}
+</td>
+                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                              {box.subcategories.length}
+                            </td>
+                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
+                              <div className="flex items-center justify-center gap-2 sm:gap-4 flex-wrap">
+                                <button
+                                  onClick={() => {
+                                    // Navigate to detail view page
+                                    router.visit(`/usher/master-list/${box.id}`);
+                                  }}
+                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline font-medium flex items-center gap-1 text-sm sm:text-base"
+                                >
+                                  <Eye size={16} />
+                                  <span className="hidden sm:inline">View</span>
+                                  <span className="sm:hidden">View</span>
+                                </button>
+                                <span className="text-gray-400 dark:text-gray-600 hidden sm:inline">|</span>
+                                <button
+                                  onClick={() => handleDeleteBox(box.id)}
+                                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:underline font-medium flex items-center gap-1 text-sm sm:text-base"
+                                >
+                                  <Trash2 size={16} />
+                                  <span className="hidden sm:inline">Delete</span>
+                                  <span className="sm:hidden">Delete</span>
+                                </button>
                               </div>
-                            </div>
-                            <button
-                              onClick={() => openAddSubcategoryModal(box.id)}
-                              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
-                            >
-                              <Plus size={16} />
-                              Add Item Type
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Box Subcategories */}
-                      {expandedBoxes.has(box.id) && (
-                        <div className="bg-gray-50 dark:bg-gray-700/50">
-                          {box.subcategories.map((subcategory) => {
-                            const subcategoryKey = `${box.id}-${subcategory.letter}`;
-                            const isSubExpanded = expandedSubcategories.has(subcategoryKey);
-
-                            return (
-                              <div
-                                key={subcategory.letter}
-                                className="border-b border-gray-200 dark:border-gray-600 last:border-b-0"
-                              >
-                                {/* Subcategory Header */}
-                                <div className="p-6">
-                                  <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-4 flex-1">
-                                      <button
-                                        onClick={() =>
-                                          toggleSubcategoryExpanded(box.id, subcategory.letter)
-                                        }
-                                        className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                                      >
-                                        <ChevronRight
-                                          size={18}
-                                          className={`transform transition-transform ${
-                                            isSubExpanded ? 'rotate-90' : ''
-                                          }`}
-                                        />
-                                      </button>
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                            {subcategory.letter}
-                                          </span>
-                                          <span className="text-sm font-medium px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-full">
-                                            {subcategory.itemName}
-                                          </span>
-                                        </div>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                          {subcategory.description}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Subcategory Stats */}
-                                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                    <div className="bg-green-50 dark:bg-green-900/20 rounded p-3">
-                                      <p className="text-xs text-green-600 dark:text-green-400 uppercase">
-                                        Stock In
-                                      </p>
-                                      <p className="text-lg font-semibold text-green-700 dark:text-green-300">
-                                        {subcategory.stockIn}
-                                      </p>
-                                    </div>
-                                    <div className="bg-red-50 dark:bg-red-900/20 rounded p-3">
-                                      <p className="text-xs text-red-600 dark:text-red-400 uppercase">
-                                        Stock Out
-                                      </p>
-                                      <p className="text-lg font-semibold text-red-700 dark:text-red-300">
-                                        {subcategory.stockOut}
-                                      </p>
-                                    </div>
-                                    <div className="bg-orange-50 dark:bg-orange-900/20 rounded p-3">
-                                      <p className="text-xs text-orange-600 dark:text-orange-400 uppercase">
-                                        Damage
-                                      </p>
-                                      <p className="text-lg font-semibold text-orange-700 dark:text-orange-300">
-                                        {subcategory.damageStock}
-                                      </p>
-                                    </div>
-                                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded p-3">
-                                      <p className="text-xs text-purple-600 dark:text-purple-400 uppercase">
-                                        In Use
-                                      </p>
-                                      <p className="text-lg font-semibold text-purple-700 dark:text-purple-300">
-                                        {subcategory.inUse}
-                                      </p>
-                                    </div>
-                                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-3">
-                                      <p className="text-xs text-blue-600 dark:text-blue-400 uppercase">
-                                        Current Stock
-                                      </p>
-                                      <p className="text-lg font-semibold text-blue-700 dark:text-blue-300">
-                                        {subcategory.currentStock}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Subcategory Details - Serial Numbers */}
-                                {isSubExpanded && (
-                                  <div className="px-6 pb-6">
-                                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                                      <div className="flex items-center justify-between mb-4">
-                                        <h4 className="font-semibold text-gray-900 dark:text-white">
-                                          Serial Numbers ({subcategory.serialItems.length})
-                                        </h4>
-                                        <button
-                                          onClick={() => openSerialModal(box.id, subcategory.letter)}
-                                          className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors"
-                                        >
-                                          View All
-                                        </button>
-                                      </div>
-
-                                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                                        {subcategory.serialItems.slice(0, 3).map((serial) => (
-                                          <div
-                                            key={serial.id}
-                                            className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600"
-                                          >
-                                            <div>
-                                              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {serial.serialNumber}
-                                              </p>
-                                              <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                {serial.supplier}
-                                              </p>
-                                            </div>
-                                          </div>
-                                        ))}
-                                        {subcategory.serialItems.length > 3 && (
-                                          <div className="text-center pt-2">
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                              +{subcategory.serialItems.length - 3} more
-                                            </p>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={3} className="px-6 py-8 text-center text-gray-600 dark:text-gray-400">
+                            No boxes found. Create one to get started!
+                          </td>
+                        </tr>
                       )}
-                    </div>
-                  ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                <div className="flex items-center justify-center gap-1 sm:gap-2 mt-6 flex-wrap">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    &lt;
+                  </button>
+
+                  <div className="flex gap-1 sm:gap-2">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-2 sm:px-3 py-2 border-2 font-semibold rounded transition-colors text-sm ${
+                          currentPage === page
+                            ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                            : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    &gt;
+                  </button>
                 </div>
               </div>
             </div>
@@ -637,380 +575,248 @@ const MasterList: MasterListPageComponent = () => {
         {/* Add Box Modal */}
         {isBoxModalOpen && (
           <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Create New Box</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-lg">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 sm:p-8 border-b-2 border-gray-900 dark:border-gray-100">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Add Box</h2>
                 <button
                   onClick={() => {
                     setIsBoxModalOpen(false);
-                    setBoxFormData({
-                      boxNumber: '',
-                    });
+                    setBoxFormData({ boxNumber: '' });
                   }}
-                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 >
-                  <X size={24} />
+                  <X size={28} />
                 </button>
               </div>
 
-              {/* Modal Body */}
-              <form onSubmit={handleAddBox} className="p-6 space-y-4">
-                {/* Box Number */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Box Number
-                  </label>
-                  <input
-                    type="text"
-                    name="boxNumber"
-                    value={boxFormData.boxNumber}
-                    onChange={handleBoxInputChange}
-                    placeholder="BOX-001"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
+              {/* Content */}
+              <div className="p-6 sm:p-8 space-y-6">
+                <form onSubmit={handleAddBox} className="space-y-6">
+                  {/* Box Name Field */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <label className="font-bold text-gray-900 dark:text-white text-sm sm:text-base min-w-fit">
+                      Box Name
+                    </label>
+                    <span className="hidden sm:block text-gray-900 dark:text-white font-bold">:</span>
+                    <input
+                      type="text"
+                      name="boxNumber"
+                      value={boxFormData.boxNumber}
+                      onChange={handleBoxInputChange}
+                      placeholder="Enter Box name"
+                      className="flex-1 px-4 py-2 border-2 border-gray-900 dark:border-gray-100 rounded-2xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors font-medium"
+                      required
+                    />
+                  </div>
 
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                  <p className="text-sm text-blue-800 dark:text-blue-300">
-                    After creating the box, you can add item types (subcategories A, B, C, etc.) to organize different items within this box.
-                  </p>
-                </div>
+                  {/* Main Category Field */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <label className="font-bold text-gray-900 dark:text-white text-sm sm:text-base min-w-fit">
+                      Main Category
+                    </label>
+                    <span className="hidden sm:block text-gray-900 dark:text-white font-bold">:</span>
+                    <div className="flex-1 px-4 py-2 border-2 border-gray-900 dark:border-gray-100 rounded-2xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white font-medium">
+                      USHER
+                    </div>
+                  </div>
+                </form>
+              </div>
 
-                {/* Modal Footer */}
-                <div className="flex gap-3 justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsBoxModalOpen(false);
-                      setBoxFormData({
-                        boxNumber: '',
-                      });
-                    }}
-                    className="px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    Create Box
-                  </button>
+              {/* Footer */}
+              <div className="flex justify-center p-6 sm:p-8 border-t-2 border-gray-900 dark:border-gray-100">
+                <button
+                  onClick={handleAddBox}
+                  className="px-8 sm:px-12 py-3 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base"
+                >
+                  Add box
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Detail Modal - View Box Contents */}
+        {isDetailModalOpen && selectedBoxForDetail && (
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 sm:p-8 border-b-2 border-gray-900 dark:border-gray-100 sticky top-0 bg-white dark:bg-gray-800 z-10">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                  {selectedBoxForDetail.boxNumber}
+                </h2>
+                <button
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  <X size={28} />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 sm:p-8">
+                <div className="space-y-6">
+                  {selectedBoxForDetail.subcategories.length > 0 ? (
+                    selectedBoxForDetail.subcategories.map((subcategory) => (
+                      <div
+                        key={subcategory.letter}
+                        className="border-2 border-gray-900 dark:border-gray-100 rounded-3xl p-6 sm:p-8 bg-white dark:bg-gray-700"
+                      >
+                        <div className="mb-4">
+                          <h3 className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                            {subcategory.letter} - {subcategory.itemName}
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{subcategory.description}</p>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+                          <div className="bg-green-50 dark:bg-green-900/20 rounded-2xl p-3 border-2 border-green-300 dark:border-green-700">
+                            <p className="text-xs text-green-600 dark:text-green-400 font-bold uppercase">Stock In</p>
+                            <p className="text-2xl font-bold text-green-700 dark:text-green-300">{subcategory.stockIn}</p>
+                          </div>
+                          <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-3 border-2 border-red-300 dark:border-red-700">
+                            <p className="text-xs text-red-600 dark:text-red-400 font-bold uppercase">Stock Out</p>
+                            <p className="text-2xl font-bold text-red-700 dark:text-red-300">{subcategory.stockOut}</p>
+                          </div>
+                          <div className="bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-3 border-2 border-orange-300 dark:border-orange-700">
+                            <p className="text-xs text-orange-600 dark:text-orange-400 font-bold uppercase">Damage</p>
+                            <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">{subcategory.damageStock}</p>
+                          </div>
+                          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-3 border-2 border-purple-300 dark:border-purple-700">
+                            <p className="text-xs text-purple-600 dark:text-purple-400 font-bold uppercase">In Use</p>
+                            <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{subcategory.inUse}</p>
+                          </div>
+                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-3 border-2 border-blue-300 dark:border-blue-700">
+                            <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase">Current</p>
+                            <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{subcategory.currentStock}</p>
+                          </div>
+                        </div>
+
+                        {subcategory.serialItems.length > 0 && (
+                          <div>
+                            <h4 className="font-bold text-gray-900 dark:text-white mb-3">
+                              Serial Numbers ({subcategory.serialItems.length})
+                            </h4>
+                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                              {subcategory.serialItems.map((serial) => (
+                                <div
+                                  key={serial.id}
+                                  className="p-3 bg-gray-50 dark:bg-gray-600 rounded-2xl border-2 border-gray-300 dark:border-gray-500"
+                                >
+                                  <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                    {serial.serialNumber}
+                                  </p>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400">{serial.supplier}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-600 dark:text-gray-400 mb-4">No item categories added yet.</p>
+                      <button
+                        onClick={() => {
+                          setIsDetailModalOpen(false);
+                          openAddSubcategoryModal(selectedBoxForDetail.id);
+                        }}
+                        className="px-6 py-2 bg-green-600 text-white rounded-full font-bold hover:bg-green-700 transition-colors text-sm"
+                      >
+                        Add Item Type
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </form>
+              </div>
+
+              {/* Footer */}
+              <div className="flex gap-3 justify-center p-6 sm:p-8 border-t-2 border-gray-900 dark:border-gray-100 sticky bottom-0 bg-white dark:bg-gray-800">
+                <button
+                  onClick={() => {
+                    setIsDetailModalOpen(false);
+                    openAddSubcategoryModal(selectedBoxForDetail.id);
+                  }}
+                  className="px-6 sm:px-8 py-3 bg-green-600 text-white rounded-full font-bold hover:bg-green-700 transition-colors text-sm sm:text-base"
+                >
+                  Add Item Type
+                </button>
+                <button
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="px-6 sm:px-8 py-3 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {/* Add Subcategory Modal */}
-        {isSubcategoryModalOpen && currentBox && (
+        {isSubcategoryModalOpen && currentBoxId !== null && (
           <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    Add Item Type
-                  </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {currentBox.boxNumber} - Letter {String.fromCharCode(65 + currentBox.subcategories.length)}
-                  </p>
-                </div>
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-lg">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 sm:p-8 border-b-2 border-gray-900 dark:border-gray-100">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Add Item Type</h2>
                 <button
                   onClick={() => {
                     setIsSubcategoryModalOpen(false);
                     setCurrentBoxId(null);
-                    setSubcategoryFormData({
-                      itemName: '',
-                      description: '',
-                    });
                   }}
-                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 >
-                  <X size={24} />
+                  <X size={28} />
                 </button>
               </div>
 
-              {/* Modal Body */}
-              <form onSubmit={handleAddSubcategory} className="p-6 space-y-4">
-                {/* Item Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Item Name
-                  </label>
-                  <input
-                    type="text"
-                    name="itemName"
-                    value={subcategoryFormData.itemName}
-                    onChange={handleSubcategoryInputChange}
-                    placeholder="Laptop"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Description
-                  </label>
-                  <input
-                    type="text"
-                    name="description"
-                    value={subcategoryFormData.description}
-                    onChange={handleSubcategoryInputChange}
-                    placeholder="Item description"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Modal Footer */}
-                <div className="flex gap-3 justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsSubcategoryModalOpen(false);
-                      setCurrentBoxId(null);
-                      setSubcategoryFormData({
-                        itemName: '',
-                        description: '',
-                      });
-                    }}
-                    className="px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-                  >
-                    Add Item Type
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Add Item Modal */}
-        {isItemModalOpen && currentSubcategory && currentBox && (
-          <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Add Item Details</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {currentBox.boxNumber} - {currentSubcategoryLetter} - {currentSubcategory.itemName}
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setIsItemModalOpen(false);
-                    setCurrentBoxId(null);
-                    setCurrentSubcategoryLetter(null);
-                    setItemFormData({
-                      unit: 'pcs',
-                      serialNumber: '',
-                      supplier: '',
-                      stockIn: 0,
-                      stockOut: 0,
-                      damageStock: 0,
-                      inUse: 0,
-                    });
-                  }}
-                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <form onSubmit={handleAddItem} className="p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Stock In */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Stock In
+              {/* Content */}
+              <div className="p-6 sm:p-8 space-y-6">
+                <form onSubmit={handleAddSubcategory} className="space-y-6">
+                  {/* Item Name Field */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <label className="font-bold text-gray-900 dark:text-white text-sm sm:text-base min-w-fit">
+                      Item Name
                     </label>
-                    <input
-                      type="number"
-                      name="stockIn"
-                      value={itemFormData.stockIn}
-                      onChange={handleItemInputChange}
-                      placeholder="0"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Stock Out */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Stock Out
-                    </label>
-                    <input
-                      type="number"
-                      name="stockOut"
-                      value={itemFormData.stockOut}
-                      onChange={handleItemInputChange}
-                      placeholder="0"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Damage Stock */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Damage Stock
-                    </label>
-                    <input
-                      type="number"
-                      name="damageStock"
-                      value={itemFormData.damageStock}
-                      onChange={handleItemInputChange}
-                      placeholder="0"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* In Use */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      In Use
-                    </label>
-                    <input
-                      type="number"
-                      name="inUse"
-                      value={itemFormData.inUse}
-                      onChange={handleItemInputChange}
-                      placeholder="0"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Serial Number */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Serial #
-                    </label>
+                    <span className="hidden sm:block text-gray-900 dark:text-white font-bold">:</span>
                     <input
                       type="text"
-                      name="serialNumber"
-                      value={itemFormData.serialNumber}
-                      onChange={handleItemInputChange}
-                      placeholder="DL123456"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      name="itemName"
+                      value={subcategoryFormData.itemName}
+                      onChange={handleSubcategoryInputChange}
+                      placeholder="Enter Item name"
+                      className="flex-1 px-4 py-2 border-2 border-gray-900 dark:border-gray-100 rounded-2xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors font-medium"
                       required
                     />
                   </div>
 
-                  {/* Supplier */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Supplier
+                  {/* Description Field */}
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                    <label className="font-bold text-gray-900 dark:text-white text-sm sm:text-base min-w-fit pt-2">
+                      Description
                     </label>
+                    <span className="hidden sm:block text-gray-900 dark:text-white font-bold pt-2">:</span>
                     <input
                       type="text"
-                      name="supplier"
-                      value={itemFormData.supplier}
-                      onChange={handleItemInputChange}
-                      placeholder="Dell Inc"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
+                      name="description"
+                      value={subcategoryFormData.description}
+                      onChange={handleSubcategoryInputChange}
+                      placeholder="Enter Description"
+                      className="flex-1 px-4 py-2 border-2 border-gray-900 dark:border-gray-100 rounded-2xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors font-medium"
                     />
                   </div>
-                </div>
-
-                {/* Modal Footer */}
-                <div className="flex gap-3 justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    type="button"
-                    onClick={handleFinishAddingItems}
-                    className="px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
-                  >
-                    Done
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    Add Item
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Serial Numbers Modal */}
-        {isSerialModalOpen && selectedBoxForSerial !== null && (
-          <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
-                <div>
-                  {(() => {
-                    const box = inventoryBoxes.find((b) => b.id === selectedBoxForSerial.boxId);
-                    const subcategory = box?.subcategories.find(
-                      (sub) => sub.letter === selectedBoxForSerial.letter
-                    );
-                    return (
-                      <>
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                          {box?.boxNumber} - {selectedBoxForSerial.letter} - Serial Numbers
-                        </h2>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          {subcategory?.itemName}
-                        </p>
-                      </>
-                    );
-                  })()}
-                </div>
-                <button
-                  onClick={() => setIsSerialModalOpen(false)}
-                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                >
-                  <X size={24} />
-                </button>
+                </form>
               </div>
 
-              {/* Modal Body */}
-              <div className="p-6">
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {(() => {
-                    const box = inventoryBoxes.find((b) => b.id === selectedBoxForSerial.boxId);
-                    const subcategory = box?.subcategories.find(
-                      (sub) => sub.letter === selectedBoxForSerial.letter
-                    );
-                    return subcategory?.serialItems.map((serial) => (
-                      <div
-                        key={serial.id}
-                        className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
-                      >
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {serial.serialNumber}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Supplier: {serial.supplier}
-                          </p>
-                        </div>
-                      </div>
-                    ));
-                  })()}
-                </div>
-
-                {/* Modal Footer */}
-                <div className="flex gap-3 justify-end pt-6 border-t border-gray-200 dark:border-gray-700 mt-6">
-                  <button
-                    onClick={() => setIsSerialModalOpen(false)}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
+              {/* Footer */}
+              <div className="flex justify-center p-6 sm:p-8 border-t-2 border-gray-900 dark:border-gray-100">
+                <button
+                  onClick={handleAddSubcategory}
+                  className="px-8 sm:px-12 py-3 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base"
+                >
+                  Add Item Type
+                </button>
               </div>
             </div>
           </div>
