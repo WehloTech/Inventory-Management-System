@@ -51,7 +51,6 @@ const MasterList: MasterListPageComponent = () => {
   const [loading, setLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState('');
-<<<<<<< HEAD
   const [expandedBoxes, setExpandedBoxes] = useState<Set<number>>(new Set());
   const [expandedSubcategories, setExpandedSubcategories] = useState<Set<string>>(new Set());
   const [isSerialModalOpen, setIsSerialModalOpen] = useState(false);
@@ -70,7 +69,7 @@ const MasterList: MasterListPageComponent = () => {
         setLoading(false);
       }
     };
-=======
+
   const [isBoxModalOpen, setIsBoxModalOpen] = useState(false);
   const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] = useState(false);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
