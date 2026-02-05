@@ -198,6 +198,42 @@ const MasterList: MasterListPageComponent = () => {
         },
       ],
     },
+        {
+      id: 7,
+      boxNumber: 'BOX-007',
+      subcategories: [
+        {
+          letter: 'A',
+          itemName: 'Monitor Stand',
+          description: 'Adjustable Monitor Stand',
+          unit: 'pcs',
+          serialItems: [],
+          stockIn: 8,
+          stockOut: 2,
+          damageStock: 0,
+          inUse: 2,
+          currentStock: 6,
+        },
+      ],
+    },
+            {
+      id: 8,
+      boxNumber: 'BOX-007',
+      subcategories: [
+        {
+          letter: 'A',
+          itemName: 'Monitor Stand',
+          description: 'Adjustable Monitor Stand',
+          unit: 'pcs',
+          serialItems: [],
+          stockIn: 8,
+          stockOut: 2,
+          damageStock: 0,
+          inUse: 2,
+          currentStock: 6,
+        },
+      ],
+    },
   ]);
 
   const [boxFormData, setBoxFormData] = useState({
