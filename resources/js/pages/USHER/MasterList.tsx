@@ -13,7 +13,7 @@ interface SerialItem {
   serialNumber: string;
   supplier: string;
 }
-
+// This is a test comment for Pull Request
 interface AlphabetSubcategory {
   letter: string;
   itemName: string;
