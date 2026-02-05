@@ -1,7 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   SidebarProvider,
   SidebarTrigger,
