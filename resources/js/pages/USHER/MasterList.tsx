@@ -501,22 +501,22 @@ const MasterList: MasterListPageComponent = () => {
                 </div>
 
                 {/* Table - Responsive */}
-                <div className="overflow-x-auto border-2 border-gray-900 dark:border-gray-100 rounded-lg bg-white dark:bg-gray-800">
+                <div className="overflow-x-auto border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
                   <table className="w-full min-w-full">
                     {/* Table Header */}
-<thead>
-  <tr className="border-b-2 border-gray-900 dark:border-gray-100">
-    <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
-      Box No.
-    </th>
-    <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
-      Category Quantity
-    </th>
-    <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
-      Action
-    </th>
-  </tr>
-</thead>
+                    <thead>
+                      <tr className="border-b border-gray-300 dark:border-gray-600">
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
+                          Box No.
+                        </th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
+                          Category Quantity
+                        </th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
 
                     {/* Table Body */}
                     <tbody>
@@ -524,12 +524,12 @@ const MasterList: MasterListPageComponent = () => {
                         paginatedBoxes.map((box, index) => (
                           <tr
                             key={box.id}
-                            className="border-b-2 border-gray-900 dark:border-gray-100 last:border-b-0 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                            className="border-b border-gray-300 dark:border-gray-600 last:border-b-0 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                           >
-<td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
-  {box.boxNumber}
-</td>
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
+                              {box.boxNumber}
+                            </td>
+                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
                               {box.subcategories.length}
                             </td>
                             <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
@@ -539,7 +539,7 @@ const MasterList: MasterListPageComponent = () => {
                                     // Navigate to detail view page
                                     router.visit(`/usher/master-list/${box.id}`);
                                   }}
-                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline font-medium flex items-center gap-1 text-sm sm:text-base"
+                                  className="text-blue-700 bg-blue-100 hover:bg-blue-200 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 rounded-lg px-3 py-1 font-medium flex items-center gap-1 text-sm sm:text-base transition-colors"
                                 >
                                   <Eye size={16} />
                                   <span className="hidden sm:inline">View</span>
@@ -548,7 +548,7 @@ const MasterList: MasterListPageComponent = () => {
                                 <span className="text-gray-400 dark:text-gray-600 hidden sm:inline">|</span>
                                 <button
                                   onClick={() => handleDeleteBox(box.id)}
-                                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:underline font-medium flex items-center gap-1 text-sm sm:text-base"
+                                  className="text-red-700 bg-red-100 hover:bg-red-200 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50 rounded-lg px-3 py-1 font-medium flex items-center gap-1 text-sm sm:text-base transition-colors"
                                 >
                                   <Trash2 size={16} />
                                   <span className="hidden sm:inline">Delete</span>
