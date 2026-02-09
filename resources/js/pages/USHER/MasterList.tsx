@@ -47,7 +47,10 @@ const MasterList: MasterListPageComponent = () => {
   const [currentBoxId, setCurrentBoxId] = useState<number | null>(null);
   const [currentSubcategoryLetter, setCurrentSubcategoryLetter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const itemsPerPage = 8;
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [boxToDelete, setBoxToDelete] = useState<InventoryBox | null>(null);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
 
   const [inventoryBoxes, setInventoryBoxes] = useState<InventoryBox[]>([
     {
@@ -447,9 +450,21 @@ const MasterList: MasterListPageComponent = () => {
     setIsDetailModalOpen(true);
   };
 
-  const handleDeleteBox = (boxId: number) => {
-    if (confirm('Are you sure you want to delete this box?')) {
-      const newBoxList = inventoryBoxes.filter((b) => b.id !== boxId);
+  const openDeleteModal = (box: InventoryBox) => {
+    setBoxToDelete(box);
+    setDeleteConfirmationInput('');
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setBoxToDelete(null);
+    setDeleteConfirmationInput('');
+  };
+
+  const handleConfirmDelete = () => {
+    if (boxToDelete && deleteConfirmationInput === boxToDelete.boxNumber) {
+      const newBoxList = inventoryBoxes.filter((b) => b.id !== boxToDelete.id);
       setInventoryBoxes(newBoxList);
       
       // Recalculate total pages after deletion
@@ -459,6 +474,15 @@ const MasterList: MasterListPageComponent = () => {
       if (currentPage > newTotalPages) {
         setCurrentPage(Math.max(1, newTotalPages));
       }
+      
+      closeDeleteModal();
+    }
+  };
+
+  const handleDeleteBox = (boxId: number) => {
+    const box = inventoryBoxes.find((b) => b.id === boxId);
+    if (box) {
+      openDeleteModal(box);
     }
   };
 
@@ -533,26 +557,25 @@ const MasterList: MasterListPageComponent = () => {
                               {box.subcategories.length}
                             </td>
                             <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
-                              <div className="flex items-center justify-center gap-2 sm:gap-4 flex-wrap">
+                              <div className="flex items-center justify-center gap-2 flex-wrap">
                                 <button
                                   onClick={() => {
                                     // Navigate to detail view page
                                     router.visit(`/usher/master-list/${box.id}`);
                                   }}
-                                  className="text-blue-700 bg-blue-100 hover:bg-blue-200 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 rounded-lg px-3 py-1 font-medium flex items-center gap-1 text-sm sm:text-base transition-colors"
+                                  className="text-blue-700 bg-blue-100 hover:bg-blue-200 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 rounded px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors"
+                                  title="View"
                                 >
-                                  <Eye size={16} />
+                                  <Eye size={14} />
                                   <span className="hidden sm:inline">View</span>
-                                  <span className="sm:hidden">View</span>
                                 </button>
-                                <span className="text-gray-400 dark:text-gray-600 hidden sm:inline">|</span>
                                 <button
                                   onClick={() => handleDeleteBox(box.id)}
-                                  className="text-red-700 bg-red-100 hover:bg-red-200 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50 rounded-lg px-3 py-1 font-medium flex items-center gap-1 text-sm sm:text-base transition-colors"
+                                  className="text-red-700 bg-red-100 hover:bg-red-200 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50 rounded px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors"
+                                  title="Delete"
                                 >
-                                  <Trash2 size={16} />
+                                  <Trash2 size={14} />
                                   <span className="hidden sm:inline">Delete</span>
-                                  <span className="sm:hidden">Delete</span>
                                 </button>
                               </div>
                             </td>
@@ -666,6 +689,66 @@ const MasterList: MasterListPageComponent = () => {
                   className="px-8 sm:px-12 py-3 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base"
                 >
                   Add Box
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {isDeleteModalOpen && boxToDelete && (
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-lg">
+              {/* Header */}
+              <div className="p-6 sm:p-8 border-b-2 border-gray-900 dark:border-gray-100">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                  {boxToDelete.boxNumber}
+                </h2>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 sm:p-8 space-y-6">
+                {/* Warning Message */}
+                <div className="bg-red-100 dark:bg-red-900/30 border-2 border-red-500 dark:border-red-600 rounded-3xl p-6">
+                  <p className="text-red-700 dark:text-red-200 font-bold text-lg">
+                    Deleting this box will permanently remove all associated sub-categories, items, and related information.
+                  </p>
+                  <p className="text-red-700 dark:text-red-200 font-bold mt-3">
+                    This action cannot be undone.
+                  </p>
+                </div>
+
+                {/* Confirmation Instructions */}
+                <div>
+                  <p className="text-gray-700 dark:text-gray-300 font-semibold mb-4">
+                    To continue, type to confirm
+                  </p>
+                  
+                  {/* Input Field */}
+                  <input
+                    type="text"
+                    placeholder="Enter box name to confirm"
+                    value={deleteConfirmationInput}
+                    onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-400 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 transition-colors font-medium text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex gap-3 justify-center p-6 sm:p-8 border-t-2 border-gray-900 dark:border-gray-100 flex-col sm:flex-row">
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleteConfirmationInput !== boxToDelete.boxNumber}
+                  className="px-8 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-300 dark:disabled:bg-red-900/50 text-white rounded-full font-bold transition-colors text-sm sm:text-base disabled:cursor-not-allowed"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={closeDeleteModal}
+                  className="px-8 py-3 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base"
+                >
+                  Cancel
                 </button>
               </div>
             </div>
