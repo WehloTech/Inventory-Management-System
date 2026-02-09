@@ -55,7 +55,7 @@ const MasterList: MasterListPageComponent = () => {
   const [inventoryBoxes, setInventoryBoxes] = useState<InventoryBox[]>([
     {
       id: 1,
-      boxNumber: 'BOX-001',
+      boxNumber: 'BOX-HAHAHA',
       subcategories: [
         {
           letter: 'A',
