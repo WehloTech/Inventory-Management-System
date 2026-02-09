@@ -88,17 +88,20 @@ export function USHERSidebar({ items = usherNavItems }: USHERSidebarProps) {
     <SidebarComponent className="bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
       {/* Header */}
       <SidebarHeader>
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center font-bold text-lg group-hover:shadow-lg group-hover:scale-110 transition-all">
-            U
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-blue-400 transition-colors">
-              USHER
-            </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Inventory</p>
-          </div>
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center font-bold text-lg group-hover:shadow-lg group-hover:scale-110 transition-all">
+              U
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-blue-400 transition-colors">
+                USHER
+              </h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Inventory</p>
+            </div>
+          </Link>
+          <ThemeToggle />
+        </div>
       </SidebarHeader>
 
       {/* Content */}
@@ -172,15 +175,12 @@ export function USHERSidebar({ items = usherNavItems }: USHERSidebarProps) {
       <SidebarFooter className="border-t border-gray-200 dark:border-gray-700">
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="flex items-center justify-between px-2 py-2">
-              <SidebarMenuButton asChild>
-                <Link href="/" prefetch className="flex-1">
-                  <Home size={20} />
-                  <span className="text-base">Back to Home</span>
-                </Link>
-              </SidebarMenuButton>
-              <ThemeToggle />
-            </div>
+            <SidebarMenuButton asChild>
+              <Link href="/" prefetch className="flex-1">
+                <Home size={20} />
+                <span className="text-base">Back to Home</span>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
