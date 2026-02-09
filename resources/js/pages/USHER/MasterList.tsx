@@ -541,8 +541,9 @@ const MasterList: MasterListPageComponent = () => {
                   </div>
                   <button
                     onClick={() => setIsBoxModalOpen(true)}
-                    className="px-6 py-2.5 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
+                    className="px-6 py-2.5 border-2 border-gray-400 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap flex items-center gap-2 justify-center"
                   >
+                    <Plus size={20} />
                     Add Box
                   </button>
                 </div>
@@ -761,7 +762,7 @@ const MasterList: MasterListPageComponent = () => {
                     type="text"
                     placeholder="Enter box name to confirm"
                     value={deleteConfirmationInput}
-                    onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                    onChange={(e) => setDeleteConfirmationInput(e.target.value.toUpperCase())}
                     className="w-full px-4 py-3 border-2 border-gray-400 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 transition-colors font-medium text-sm"
                   />
                 </div>
