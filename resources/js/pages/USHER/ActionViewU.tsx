@@ -227,8 +227,13 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId, box }) => {
   };
 
   const handleViewSerials = (subcategory: AlphabetSubcategory) => {
-    console.log('View serials for:', subcategory.letter, subcategory.itemName);
-    alert(`Serial Numbers for ${subcategory.letter} - ${subcategory.itemName}:\n${subcategory.serialItems.map(s => `${s.serialNumber} (${s.supplier})`).join('\n')}`);
+    // Navigate to the serial number detail page
+    router.visit(`/usher/master-list/${currentBox?.id}/serials/${subcategory.letter}`, {
+      data: {
+        boxNumber: currentBox?.boxNumber,
+        itemCategory: subcategory.itemName,
+      }
+    });
   };
 
   if (!currentBox) {
