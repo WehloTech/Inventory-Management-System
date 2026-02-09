@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
 import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-<<<<<<< HEAD
-import { Search, Plus, Eye, Trash2 } from 'lucide-react'; // added Eye and Trash2
-=======
 import { Search, Plus, X, Eye, Trash2 } from 'lucide-react';
 
 interface SerialItem {
@@ -34,36 +32,21 @@ interface InventoryBox {
   boxNumber: string;
   subcategories: AlphabetSubcategory[];
 }
->>>>>>> main
 
 interface MasterListPageComponent extends React.FC {
   layout?: any;
 }
 
-interface Box {
-  id: number;
-  boxName: string;
-  itemCategoryQuantity: number;
-}
-
 const MasterList: MasterListPageComponent = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isBoxModalOpen, setIsBoxModalOpen] = useState(false);
+  const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] = useState(false);
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedBoxForDetail, setSelectedBoxForDetail] = useState<InventoryBox | null>(null);
+  const [currentBoxId, setCurrentBoxId] = useState<number | null>(null);
+  const [currentSubcategoryLetter, setCurrentSubcategoryLetter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-<<<<<<< HEAD
-  const itemsPerPage = 9;
-
-  const [boxes, setBoxes] = useState<Box[]>([
-    { id: 1, boxName: 'Box-001', itemCategoryQuantity: 5 },
-    { id: 2, boxName: 'Box-002', itemCategoryQuantity: 4 },
-    { id: 3, boxName: 'Box-003', itemCategoryQuantity: 4 },
-    { id: 4, boxName: 'Box-004', itemCategoryQuantity: 7 },
-    { id: 5, boxName: 'Box-005', itemCategoryQuantity: 3 },
-    { id: 6, boxName: 'Box-006', itemCategoryQuantity: 2 },
-    { id: 7, boxName: 'Box-007', itemCategoryQuantity: 8 },
-    { id: 8, boxName: 'Box-008', itemCategoryQuantity: 6 },
-    { id: 9, boxName: 'Box-009', itemCategoryQuantity: 5 },
-    { id: 10, boxName: 'Box-010', itemCategoryQuantity: 9 },
-=======
   const itemsPerPage = 8;
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [boxToDelete, setBoxToDelete] = useState<InventoryBox | null>(null);
@@ -238,7 +221,7 @@ const MasterList: MasterListPageComponent = () => {
     },
             {
       id: 8,
-      boxNumber: 'BOX-007',
+      boxNumber: 'BOX-008',
       subcategories: [
         {
           letter: 'A',
@@ -254,28 +237,59 @@ const MasterList: MasterListPageComponent = () => {
         },
       ],
     },
->>>>>>> main
   ]);
 
-  const filteredBoxes = boxes.filter((box) =>
-    box.boxName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const [boxFormData, setBoxFormData] = useState({
+    boxNumber: '',
+  });
 
+  const [subcategoryFormData, setSubcategoryFormData] = useState({
+    itemName: '',
+    description: '',
+  });
+
+  const [itemFormData, setItemFormData] = useState({
+    unit: 'pcs',
+    serialNumber: '',
+    supplier: '',
+    stockIn: 0,
+    stockOut: 0,
+    damageStock: 0,
+    inUse: 0,
+  });
+
+  const [boxError, setBoxError] = useState('');
+  const [showBoxError, setShowBoxError] = useState(false);
+
+  // Filter boxes by item name, box number, serial number, or supplier
+  const filteredBoxes = inventoryBoxes.filter((box) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      box.boxNumber.toLowerCase().includes(query) ||
+      box.subcategories.some(
+        (sub) =>
+          sub.itemName.toLowerCase().includes(query) ||
+          sub.description.toLowerCase().includes(query) ||
+          sub.letter.toLowerCase().includes(query) ||
+          sub.serialItems.some(
+            (serial) =>
+              serial.serialNumber.toLowerCase().includes(query) ||
+              serial.supplier.toLowerCase().includes(query)
+          )
+      )
+    );
+  });
+
+  // Pagination
   const totalPages = Math.ceil(filteredBoxes.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentBoxes = filteredBoxes.slice(startIndex, endIndex);
+  const paginatedBoxes = filteredBoxes.slice(startIndex, startIndex + itemsPerPage);
 
-<<<<<<< HEAD
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-=======
   const handleBoxInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setBoxFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: value.toUpperCase(),
     }));
   };
 
@@ -298,7 +312,25 @@ const MasterList: MasterListPageComponent = () => {
   const handleAddBox = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const newBoxId = Math.max(...inventoryBoxes.map((b) => b.id), 0) + 1;
+    // Check if box number already exists
+    const boxNumberExists = inventoryBoxes.some(
+      (box) => box.boxNumber.toLowerCase() === boxFormData.boxNumber.toLowerCase()
+    );
+
+    if (boxNumberExists) {
+      setBoxError('Box ID already has been taken');
+      setShowBoxError(true);
+      return;
+    }
+
+    if (!boxFormData.boxNumber.trim()) {
+      setBoxError('Please enter a box name');
+      setShowBoxError(true);
+      return;
+    }
+
+    // Generate unique ID using timestamp and random number for guaranteed uniqueness
+    const newBoxId = Date.now() + Math.floor(Math.random() * 10000);
 
     const newBox: InventoryBox = {
       id: newBoxId,
@@ -316,6 +348,8 @@ const MasterList: MasterListPageComponent = () => {
     setBoxFormData({
       boxNumber: '',
     });
+    setBoxError('');
+    setShowBoxError(false);
     setIsBoxModalOpen(false);
   };
 
@@ -472,7 +506,6 @@ const MasterList: MasterListPageComponent = () => {
     const box = inventoryBoxes.find((b) => b.id === boxId);
     if (box) {
       openDeleteModal(box);
->>>>>>> main
     }
   };
 
@@ -481,31 +514,15 @@ const MasterList: MasterListPageComponent = () => {
       <Head title="Master List" />
       <SidebarProvider>
         <USHERSidebar />
-        <main className="flex-1 w-full h-full overflow-hidden flex flex-col">
-          {/* Header */}
-          <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-600 flex-shrink-0">
+        <main className="flex-1 w-full h-screen overflow-hidden flex flex-col bg-white dark:bg-gray-900">
+          <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
             <SidebarTrigger />
-            <h1 className="text-xl font-bold">Masterlist</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Masterlist</h1>
           </div>
 
-<<<<<<< HEAD
-          {/* Main content */}
-          <div className="flex-1 flex flex-col p-6 overflow-hidden">
-            <div className="w-full max-w-6xl mx-auto flex flex-col">
-              {/* Search and Add Bar */}
-              <div className="flex gap-4 items-center flex-shrink-0 mb-6">
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    placeholder="Search Box"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-=======
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-hidden flex flex-col">
             {/* Content */}
-            <div className="flex-1 overflow-auto p-4 sm:p-6 flex flex-col bg-white dark:bg-gray-900">
+            <div className="flex-1 overflow-hidden p-4 sm:p-6 flex flex-col bg-white dark:bg-gray-900">
               <div className="w-full flex flex-col flex-1">
                 {/* Search and Add Bar */}
                 <div className="flex gap-3 sm:gap-4 mb-6 flex-col sm:flex-row items-stretch sm:items-center">
@@ -528,62 +545,8 @@ const MasterList: MasterListPageComponent = () => {
                   >
                     Add Box
                   </button>
->>>>>>> main
                 </div>
-                <button className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-full font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                  Add box
-                </button>
-              </div>
 
-<<<<<<< HEAD
-              {/* Table */}
-              <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-                <table className="w-full border-collapse">
-                  <thead className="bg-white dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600">
-                    <tr>
-                      <th className="px-4 py-2 text-center text-sm font-bold text-gray-900 dark:text-white">
-                        Box Name
-                      </th>
-                      <th className="px-4 py-2 text-center text-sm font-bold text-gray-900 dark:text-white">
-                        Item Category Quantity
-                      </th>
-                      <th className="px-4 py-2 text-center text-sm font-bold text-gray-900 dark:text-white">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody className="bg-white dark:bg-gray-800">
-                    {currentBoxes.map((box, index) => (
-                      <tr
-                        key={box.id}
-                        className={
-                          index !== currentBoxes.length - 1
-                            ? 'border-b border-gray-300 dark:border-gray-600'
-                            : ''
-                        }
-                      >
-                        <td className="px-4 py-2 text-sm text-center text-gray-900 dark:text-white">
-                          {box.boxName}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-center text-gray-900 dark:text-white">
-                          {box.itemCategoryQuantity}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-center">
-                          <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
-                            View <Eye size={16} />
-                          </span>
-                          <span className="mx-2 text-gray-400">|</span>
-                          <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 hover:underline cursor-pointer">
-                            Delete <Trash2 size={16} />
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-=======
                 {/* Table - Responsive */}
                 <div className="overflow-x-auto border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
                   <table className="w-full min-w-full">
@@ -623,7 +586,7 @@ const MasterList: MasterListPageComponent = () => {
                                     // Navigate to detail view page
                                     router.visit(`/usher/master-list/${box.id}`);
                                   }}
-                                  className="text-blue-700 bg-blue-100 hover:bg-blue-200 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 rounded px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors"
+                                  className="text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors"
                                   title="View"
                                 >
                                   <Eye size={14} />
@@ -631,7 +594,7 @@ const MasterList: MasterListPageComponent = () => {
                                 </button>
                                 <button
                                   onClick={() => handleDeleteBox(box.id)}
-                                  className="text-red-700 bg-red-100 hover:bg-red-200 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50 rounded px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors"
+                                  className="text-white bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 rounded px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors"
                                   title="Delete"
                                 >
                                   <Trash2 size={14} />
@@ -651,48 +614,45 @@ const MasterList: MasterListPageComponent = () => {
                     </tbody>
                   </table>
                 </div>
->>>>>>> main
 
-              {/* Pagination */}
-              <div className="flex justify-center mt-2">
-                <div className="flex items-center gap-1">
+                {/* Pagination */}
+                <div className="flex items-center justify-center gap-1 sm:gap-2 mt-4 mb-4 flex-wrap">
                   <button
-                    onClick={() => handlePageChange(currentPage - 1)}
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="px-2 py-0.5 text-sm font-bold text-gray-900 dark:text-white disabled:opacity-30"
+                    className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                   >
                     &lt;
                   </button>
 
-                  {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={`px-0.5 py-0.5 min-w-[28px] text-sm border ${
-                        currentPage === page
-                          ? 'border-gray-400 dark:border-gray-500 bg-gray-200 dark:bg-gray-700 font-bold'
-                          : 'border-gray-300 dark:border-gray-600'
-                      } text-gray-900 dark:text-white`}
-                    >
-                      {page}
-                    </button>
-                  ))}
+                  <div className="flex gap-1 sm:gap-2">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-2 sm:px-3 py-2 border-2 font-semibold rounded transition-colors text-sm ${
+                          currentPage === page
+                            ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                            : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
 
                   <button
-                    onClick={() => handlePageChange(currentPage + 1)}
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-2 py-0.5 text-sm font-bold text-gray-900 dark:text-white disabled:opacity-30"
+                    className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                   >
                     &gt;
                   </button>
                 </div>
               </div>
-
             </div>
           </div>
         </main>
-<<<<<<< HEAD
-=======
 
         {/* Add Box Modal */}
         {isBoxModalOpen && (
@@ -705,6 +665,8 @@ const MasterList: MasterListPageComponent = () => {
                   onClick={() => {
                     setIsBoxModalOpen(false);
                     setBoxFormData({ boxNumber: '' });
+                    setBoxError('');
+                    setShowBoxError(false);
                   }}
                   className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 >
@@ -714,6 +676,13 @@ const MasterList: MasterListPageComponent = () => {
 
               {/* Content */}
               <div className="p-6 sm:p-8 space-y-6">
+                {showBoxError && (
+                  <div className="bg-red-100 dark:bg-red-900/30 border-2 border-red-500 dark:border-red-600 rounded-2xl p-4">
+                    <p className="text-red-700 dark:text-red-200 font-bold text-sm">
+                      {boxError}
+                    </p>
+                  </div>
+                )}
                 <form onSubmit={handleAddBox} className="space-y-6">
                   {/* Box Name Field */}
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -820,10 +789,10 @@ const MasterList: MasterListPageComponent = () => {
 
         {/* Detail Modal - View Box Contents */}
         {isDetailModalOpen && selectedBoxForDetail && (
-          <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto">
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between p-6 sm:p-8 border-b-2 border-gray-900 dark:border-gray-100 sticky top-0 bg-white dark:bg-gray-800 z-10">
+              <div className="flex items-center justify-between p-6 sm:p-8 border-b-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-800">
                 <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
                   {selectedBoxForDetail.boxNumber}
                 </h2>
@@ -836,8 +805,8 @@ const MasterList: MasterListPageComponent = () => {
               </div>
 
               {/* Content */}
-              <div className="p-6 sm:p-8">
-                <div className="space-y-6">
+              <div className="p-6 sm:p-8 flex-1 overflow-hidden">
+                <div className="space-y-6 overflow-hidden">
                   {selectedBoxForDetail.subcategories.length > 0 ? (
                     selectedBoxForDetail.subcategories.map((subcategory) => (
                       <div
@@ -914,7 +883,7 @@ const MasterList: MasterListPageComponent = () => {
               </div>
 
               {/* Footer */}
-              <div className="flex gap-3 justify-center p-6 sm:p-8 border-t-2 border-gray-900 dark:border-gray-100 sticky bottom-0 bg-white dark:bg-gray-800">
+              <div className="flex gap-3 justify-center p-6 sm:p-8 border-t-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-800">
                 <button
                   onClick={() => {
                     setIsDetailModalOpen(false);
@@ -1003,7 +972,6 @@ const MasterList: MasterListPageComponent = () => {
             </div>
           </div>
         )}
->>>>>>> main
       </SidebarProvider>
     </>
   );
