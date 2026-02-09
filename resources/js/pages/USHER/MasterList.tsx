@@ -221,7 +221,7 @@ const MasterList: MasterListPageComponent = () => {
     },
             {
       id: 8,
-      boxNumber: 'BOX-007',
+      boxNumber: 'BOX-008',
       subcategories: [
         {
           letter: 'A',
@@ -258,6 +258,9 @@ const MasterList: MasterListPageComponent = () => {
     inUse: 0,
   });
 
+  const [boxError, setBoxError] = useState('');
+  const [showBoxError, setShowBoxError] = useState(false);
+
   // Filter boxes by item name, box number, serial number, or supplier
   const filteredBoxes = inventoryBoxes.filter((box) => {
     const query = searchQuery.toLowerCase();
@@ -286,7 +289,7 @@ const MasterList: MasterListPageComponent = () => {
     const { name, value } = e.target;
     setBoxFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: value.toUpperCase(),
     }));
   };
 
@@ -309,7 +312,25 @@ const MasterList: MasterListPageComponent = () => {
   const handleAddBox = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const newBoxId = Math.max(...inventoryBoxes.map((b) => b.id), 0) + 1;
+    // Check if box number already exists
+    const boxNumberExists = inventoryBoxes.some(
+      (box) => box.boxNumber.toLowerCase() === boxFormData.boxNumber.toLowerCase()
+    );
+
+    if (boxNumberExists) {
+      setBoxError('Box ID already has been taken');
+      setShowBoxError(true);
+      return;
+    }
+
+    if (!boxFormData.boxNumber.trim()) {
+      setBoxError('Please enter a box name');
+      setShowBoxError(true);
+      return;
+    }
+
+    // Generate unique ID using timestamp and random number for guaranteed uniqueness
+    const newBoxId = Date.now() + Math.floor(Math.random() * 10000);
 
     const newBox: InventoryBox = {
       id: newBoxId,
@@ -327,6 +348,8 @@ const MasterList: MasterListPageComponent = () => {
     setBoxFormData({
       boxNumber: '',
     });
+    setBoxError('');
+    setShowBoxError(false);
     setIsBoxModalOpen(false);
   };
 
@@ -491,15 +514,15 @@ const MasterList: MasterListPageComponent = () => {
       <Head title="Master List" />
       <SidebarProvider>
         <USHERSidebar />
-        <main className="h-screen flex-1 w-full overflow-hidden flex flex-col bg-white dark:bg-gray-900">
+        <main className="flex-1 w-full overflow-hidden flex flex-col bg-white dark:bg-gray-900">
           <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
             <SidebarTrigger />
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">Masterlist</h1>
           </div>
 
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-hidden flex flex-col">
             {/* Content */}
-            <div className="flex-1 overflow-auto p-4 sm:p-6 flex flex-col bg-white dark:bg-gray-900">
+            <div className="flex-1 overflow-hidden p-4 sm:p-6 flex flex-col bg-white dark:bg-gray-900">
               <div className="w-full flex flex-col flex-1">
                 {/* Search and Add Bar */}
                 <div className="flex gap-3 sm:gap-4 mb-6 flex-col sm:flex-row items-stretch sm:items-center">
@@ -563,7 +586,7 @@ const MasterList: MasterListPageComponent = () => {
                                     // Navigate to detail view page
                                     router.visit(`/usher/master-list/${box.id}`);
                                   }}
-                                  className="text-blue-700 bg-blue-100 hover:bg-blue-200 dark:text-blue-300 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 rounded px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors"
+                                  className="text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors"
                                   title="View"
                                 >
                                   <Eye size={14} />
@@ -571,7 +594,7 @@ const MasterList: MasterListPageComponent = () => {
                                 </button>
                                 <button
                                   onClick={() => handleDeleteBox(box.id)}
-                                  className="text-red-700 bg-red-100 hover:bg-red-200 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-900/50 rounded px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors"
+                                  className="text-white bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 rounded px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors"
                                   title="Delete"
                                 >
                                   <Trash2 size={14} />
@@ -593,7 +616,7 @@ const MasterList: MasterListPageComponent = () => {
                 </div>
 
                 {/* Pagination */}
-                <div className="flex items-center justify-center gap-1 sm:gap-2 mt-6 flex-wrap">
+                <div className="flex items-center justify-center gap-1 sm:gap-2 mt-4 mb-4 flex-wrap">
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
@@ -642,6 +665,8 @@ const MasterList: MasterListPageComponent = () => {
                   onClick={() => {
                     setIsBoxModalOpen(false);
                     setBoxFormData({ boxNumber: '' });
+                    setBoxError('');
+                    setShowBoxError(false);
                   }}
                   className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 >
@@ -651,6 +676,13 @@ const MasterList: MasterListPageComponent = () => {
 
               {/* Content */}
               <div className="p-6 sm:p-8 space-y-6">
+                {showBoxError && (
+                  <div className="bg-red-100 dark:bg-red-900/30 border-2 border-red-500 dark:border-red-600 rounded-2xl p-4">
+                    <p className="text-red-700 dark:text-red-200 font-bold text-sm">
+                      {boxError}
+                    </p>
+                  </div>
+                )}
                 <form onSubmit={handleAddBox} className="space-y-6">
                   {/* Box Name Field */}
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -757,10 +789,10 @@ const MasterList: MasterListPageComponent = () => {
 
         {/* Detail Modal - View Box Contents */}
         {isDetailModalOpen && selectedBoxForDetail && (
-          <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto">
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between p-6 sm:p-8 border-b-2 border-gray-900 dark:border-gray-100 sticky top-0 bg-white dark:bg-gray-800 z-10">
+              <div className="flex items-center justify-between p-6 sm:p-8 border-b-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-800">
                 <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
                   {selectedBoxForDetail.boxNumber}
                 </h2>
@@ -773,8 +805,8 @@ const MasterList: MasterListPageComponent = () => {
               </div>
 
               {/* Content */}
-              <div className="p-6 sm:p-8">
-                <div className="space-y-6">
+              <div className="p-6 sm:p-8 flex-1 overflow-hidden">
+                <div className="space-y-6 overflow-hidden">
                   {selectedBoxForDetail.subcategories.length > 0 ? (
                     selectedBoxForDetail.subcategories.map((subcategory) => (
                       <div
@@ -851,7 +883,7 @@ const MasterList: MasterListPageComponent = () => {
               </div>
 
               {/* Footer */}
-              <div className="flex gap-3 justify-center p-6 sm:p-8 border-t-2 border-gray-900 dark:border-gray-100 sticky bottom-0 bg-white dark:bg-gray-800">
+              <div className="flex gap-3 justify-center p-6 sm:p-8 border-t-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-800">
                 <button
                   onClick={() => {
                     setIsDetailModalOpen(false);
