@@ -55,7 +55,7 @@ const MasterList: MasterListPageComponent = () => {
   const [inventoryBoxes, setInventoryBoxes] = useState<InventoryBox[]>([
     {
       id: 1,
-      boxNumber: 'BOX-HAHAHA',
+      boxNumber: 'BOX-001',
       subcategories: [
         {
           letter: 'A',
@@ -514,7 +514,7 @@ const MasterList: MasterListPageComponent = () => {
       <Head title="Master List" />
       <SidebarProvider>
         <USHERSidebar />
-        <main className="flex-1 w-full overflow-hidden flex flex-col bg-white dark:bg-gray-900">
+        <main className="flex-1 w-full h-screen overflow-hidden flex flex-col bg-white dark:bg-gray-900">
           <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
             <SidebarTrigger />
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">Masterlist</h1>
