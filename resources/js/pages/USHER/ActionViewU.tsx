@@ -5,7 +5,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Search, ChevronLeft, Plus } from 'lucide-react';
+import { Search, ChevronLeft, Plus, X } from 'lucide-react';
 
 interface SerialItem {
   id: number;
@@ -193,6 +193,12 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId, box }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  
+  // Add Box Modal states
+  const [isBoxModalOpen, setIsBoxModalOpen] = useState(false);
+  const [boxFormData, setBoxFormData] = useState({ boxNumber: '' });
+  const [boxError, setBoxError] = useState('');
+  const [showBoxError, setShowBoxError] = useState(false);
 
   // Use passed box data or find from sample data
   const currentBox = useMemo(() => {
@@ -231,6 +237,37 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId, box }) => {
     // Format: /usher/master-list/{boxId}/item/{itemName}
     const encodedItemName = encodeURIComponent(subcategory.itemName);
     router.visit(`/usher/master-list/${currentBox?.id}/item/${encodedItemName}`);
+  };
+
+  const handleBoxInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setBoxFormData((prev) => ({
+      ...prev,
+      [name]: value.toUpperCase(),
+    }));
+  };
+
+  const handleAddBox = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!boxFormData.boxNumber.trim()) {
+      setBoxError('Please enter a box name');
+      setShowBoxError(true);
+      return;
+    }
+
+    // Here you would typically save to database
+    // For now, just navigate to the new box (you'll need to implement this in your backend)
+    console.log('Adding new box:', boxFormData.boxNumber);
+    
+    // Close modal and reset form
+    setBoxFormData({ boxNumber: '' });
+    setBoxError('');
+    setShowBoxError(false);
+    setIsBoxModalOpen(false);
+    
+    // Navigate back to master list to see the new box
+    router.visit('/usher/master-list');
   };
 
   if (!currentBox) {
@@ -306,7 +343,7 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId, box }) => {
                     />
                   </div>
                   <button
-                    onClick={() => router.visit('/usher/master-list')}
+                    onClick={() => setIsBoxModalOpen(true)}
                     className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950"
                   >
                     <Plus size={20} />
@@ -453,6 +490,79 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId, box }) => {
             </div>
           </div>
         </main>
+
+        {/* Add Box Modal */}
+        {isBoxModalOpen && (
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-lg">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 sm:p-8 border-b-2 border-gray-900 dark:border-gray-100">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Add Box</h2>
+                <button
+                  onClick={() => {
+                    setIsBoxModalOpen(false);
+                    setBoxFormData({ boxNumber: '' });
+                    setBoxError('');
+                    setShowBoxError(false);
+                  }}
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  <X size={28} />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 sm:p-8 space-y-6">
+                {showBoxError && (
+                  <div className="bg-red-100 dark:bg-red-900/30 border-2 border-red-500 dark:border-red-600 rounded-2xl p-4">
+                    <p className="text-red-700 dark:text-red-200 font-bold text-sm">
+                      {boxError}
+                    </p>
+                  </div>
+                )}
+                <form onSubmit={handleAddBox} className="space-y-6">
+                  {/* Box Name Field */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <label className="font-bold text-gray-900 dark:text-white text-sm sm:text-base min-w-fit">
+                      Box Name
+                    </label>
+                    <span className="hidden sm:block text-gray-900 dark:text-white font-bold">:</span>
+                    <input
+                      type="text"
+                      name="boxNumber"
+                      value={boxFormData.boxNumber}
+                      onChange={handleBoxInputChange}
+                      placeholder="Enter Box name"
+                      className="flex-1 px-4 py-2 border-2 border-gray-900 dark:border-gray-100 rounded-2xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors font-medium"
+                      required
+                    />
+                  </div>
+
+                  {/* Main Category Field */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <label className="font-bold text-gray-900 dark:text-white text-sm sm:text-base min-w-fit">
+                      Main Category
+                    </label>
+                    <span className="hidden sm:block text-gray-900 dark:text-white font-bold">:</span>
+                    <div className="flex-1 px-4 py-2 border-2 border-gray-900 dark:border-gray-100 rounded-2xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white font-medium">
+                      USHER
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+              {/* Footer */}
+              <div className="flex justify-center p-6 sm:p-8 border-t-2 border-gray-900 dark:border-gray-100">
+                <button
+                  onClick={handleAddBox}
+                  className="px-8 sm:px-12 py-3 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base"
+                >
+                  Add Box
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </SidebarProvider>
     </>
   );
