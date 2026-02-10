@@ -5,7 +5,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Search, ChevronLeft } from 'lucide-react';
+import { Search, ChevronLeft, Plus } from 'lucide-react';
 
 interface SerialItem {
   id: number;
@@ -228,12 +228,9 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId, box }) => {
 
   const handleViewSerials = (subcategory: AlphabetSubcategory) => {
     // Navigate to the serial number detail page
-    router.visit(`/usher/master-list/${currentBox?.id}/serials/${subcategory.letter}`, {
-      data: {
-        boxNumber: currentBox?.boxNumber,
-        itemCategory: subcategory.itemName,
-      }
-    });
+    // Format: /usher/master-list/{boxId}/item/{itemName}
+    const encodedItemName = encodeURIComponent(subcategory.itemName);
+    router.visit(`/usher/master-list/${currentBox?.id}/item/${encodedItemName}`);
   };
 
   if (!currentBox) {
@@ -310,41 +307,42 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId, box }) => {
                   </div>
                   <button
                     onClick={() => router.visit('/usher/master-list')}
-                    className="px-6 py-2.5 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
+                    className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950"
                   >
+                    <Plus size={20} />
                     Add box
                   </button>
                 </div>
 
                 {/* Box Title Box */}
-                <div className="mb-6 border-2 border-gray-900 dark:border-gray-100 rounded-lg p-4">
+                <div className="mb-6 border border-gray-300 dark:border-gray-600 rounded-lg p-4">
                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
                     {currentBox.boxNumber}
                   </h3>
                 </div>
 
                 {/* Table */}
-                <div className="border-2 border-gray-900 dark:border-gray-100 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
                   <table className="w-full min-w-full">
                     {/* Table Header */}
                     <thead>
-                      <tr className="border-b-2 border-gray-900 dark:border-gray-100">
-                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                      <tr className="border-b border-gray-300 dark:border-gray-600">
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
                           Sub Item Category
                         </th>
-                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
                           Stock In
                         </th>
-                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
                           Stock out
                         </th>
-                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
                           Damage
                         </th>
-                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
                           In Use
                         </th>
-                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
                           Current Items
                         </th>
                         <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
@@ -359,26 +357,26 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId, box }) => {
                         paginatedSubcategories.map((subcategory) => (
                           <tr
                             key={subcategory.letter}
-                            className="border-b-2 border-gray-900 dark:border-gray-100 last:border-b-0 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                            className="border-b border-gray-300 dark:border-gray-600 last:border-b-0 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                           >
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
                               <div className="flex flex-col items-center">
                                 <p className="text-sm">{subcategory.itemName}</p>
                               </div>
                             </td>
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
                               {subcategory.stockIn}
                             </td>
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
                               {subcategory.stockOut}
                             </td>
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
                               {subcategory.damageStock}
                             </td>
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
                               {subcategory.inUse}
                             </td>
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium border-r border-gray-900 dark:border-gray-100 text-sm sm:text-base">
+                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
                               {subcategory.currentStock}
                             </td>
                             <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">

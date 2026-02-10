@@ -541,7 +541,7 @@ const MasterList: MasterListPageComponent = () => {
                   </div>
                   <button
                     onClick={() => setIsBoxModalOpen(true)}
-                    className="px-6 py-2.5 border-2 border-gray-400 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap flex items-center gap-2 justify-center"
+                    className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950"
                   >
                     <Plus size={20} />
                     Add Box
@@ -782,123 +782,6 @@ const MasterList: MasterListPageComponent = () => {
                   className="px-8 py-3 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base"
                 >
                   Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Detail Modal - View Box Contents */}
-        {isDetailModalOpen && selectedBoxForDetail && (
-          <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4 overflow-hidden">
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 sm:p-8 border-b-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-800">
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                  {selectedBoxForDetail.boxNumber}
-                </h2>
-                <button
-                  onClick={() => setIsDetailModalOpen(false)}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                >
-                  <X size={28} />
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="p-6 sm:p-8 flex-1 overflow-hidden">
-                <div className="space-y-6 overflow-hidden">
-                  {selectedBoxForDetail.subcategories.length > 0 ? (
-                    selectedBoxForDetail.subcategories.map((subcategory) => (
-                      <div
-                        key={subcategory.letter}
-                        className="border-2 border-gray-900 dark:border-gray-100 rounded-3xl p-6 sm:p-8 bg-white dark:bg-gray-700"
-                      >
-                        <div className="mb-4">
-                          <h3 className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                            {subcategory.letter} - {subcategory.itemName}
-                          </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{subcategory.description}</p>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-                          <div className="bg-green-50 dark:bg-green-900/20 rounded-2xl p-3 border-2 border-green-300 dark:border-green-700">
-                            <p className="text-xs text-green-600 dark:text-green-400 font-bold uppercase">Stock In</p>
-                            <p className="text-2xl font-bold text-green-700 dark:text-green-300">{subcategory.stockIn}</p>
-                          </div>
-                          <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-3 border-2 border-red-300 dark:border-red-700">
-                            <p className="text-xs text-red-600 dark:text-red-400 font-bold uppercase">Stock Out</p>
-                            <p className="text-2xl font-bold text-red-700 dark:text-red-300">{subcategory.stockOut}</p>
-                          </div>
-                          <div className="bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-3 border-2 border-orange-300 dark:border-orange-700">
-                            <p className="text-xs text-orange-600 dark:text-orange-400 font-bold uppercase">Damage</p>
-                            <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">{subcategory.damageStock}</p>
-                          </div>
-                          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-3 border-2 border-purple-300 dark:border-purple-700">
-                            <p className="text-xs text-purple-600 dark:text-purple-400 font-bold uppercase">In Use</p>
-                            <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{subcategory.inUse}</p>
-                          </div>
-                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-3 border-2 border-blue-300 dark:border-blue-700">
-                            <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase">Current</p>
-                            <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{subcategory.currentStock}</p>
-                          </div>
-                        </div>
-
-                        {subcategory.serialItems.length > 0 && (
-                          <div>
-                            <h4 className="font-bold text-gray-900 dark:text-white mb-3">
-                              Serial Numbers ({subcategory.serialItems.length})
-                            </h4>
-                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                              {subcategory.serialItems.map((serial) => (
-                                <div
-                                  key={serial.id}
-                                  className="p-3 bg-gray-50 dark:bg-gray-600 rounded-2xl border-2 border-gray-300 dark:border-gray-500"
-                                >
-                                  <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                    {serial.serialNumber}
-                                  </p>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400">{serial.supplier}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-gray-600 dark:text-gray-400 mb-4">No item categories added yet.</p>
-                      <button
-                        onClick={() => {
-                          setIsDetailModalOpen(false);
-                          openAddSubcategoryModal(selectedBoxForDetail.id);
-                        }}
-                        className="px-6 py-2 bg-green-600 text-white rounded-full font-bold hover:bg-green-700 transition-colors text-sm"
-                      >
-                        Add Item Type
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="flex gap-3 justify-center p-6 sm:p-8 border-t-2 border-gray-900 dark:border-gray-100 bg-white dark:bg-gray-800">
-                <button
-                  onClick={() => {
-                    setIsDetailModalOpen(false);
-                    openAddSubcategoryModal(selectedBoxForDetail.id);
-                  }}
-                  className="px-6 sm:px-8 py-3 bg-green-600 text-white rounded-full font-bold hover:bg-green-700 transition-colors text-sm sm:text-base"
-                >
-                  Add Item Type
-                </button>
-                <button
-                  onClick={() => setIsDetailModalOpen(false)}
-                  className="px-6 sm:px-8 py-3 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base"
-                >
-                  Close
                 </button>
               </div>
             </div>

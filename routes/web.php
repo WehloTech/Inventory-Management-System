@@ -18,6 +18,15 @@ Route::prefix('usher')->group(function () {
     
     Route::get('/master-list', [MasterListController::class, 'index'])->name('usher.master-list');
     
+    // Serial Number View - MUST come BEFORE the generic {boxId} route
+    Route::get('/master-list/{boxId}/item/{itemName}', function ($boxId, $itemName) {
+        return Inertia::render('USHER/SerialNumberView', [
+            'boxId' => (int)$boxId,
+            'itemName' => urldecode($itemName),
+        ]);
+    })->name('usher.serial-number-view');
+    
+    // Box Details View
     Route::get('/master-list/{boxId}', [MasterListController::class, 'show'])->name('usher.actionviewu');
 
     Route::get('/stock-in', function () {
