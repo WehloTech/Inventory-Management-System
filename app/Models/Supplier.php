@@ -6,17 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Supplier extends Model
 {
-    
+    protected $fillable = ['name', 'email', 'contact_number'];
 
-    protected $fillable = [
-        'name',
-        'email',
-        'contactNumber',
-        'stock_id'
-    ];
-
-    public function stock()
+    public function items()
     {
-        return $this->belongsTo(Stock::class, 'stock_id');
+        return $this->hasMany(Item::class);
     }
 }

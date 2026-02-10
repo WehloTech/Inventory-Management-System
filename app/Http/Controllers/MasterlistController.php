@@ -2,49 +2,100 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Box;
+use App\Models\Subcategory;
+use App\Models\Item;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class MasterlistController extends Controller
 {
-    /**
-     * Return Usher stock summary for Masterlist / React page
-     */
-    public function usherStocks()
+    /*
+    ======================================================
+    1️⃣ GET BOXES BY MAIN CATEGORY
+    Columns:
+    - BoxName
+    - Category Quantity
+    - Action(View)
+    ======================================================
+    */
+    public function getBoxesByCategory($mainCategoryId)
     {
-        $stocks = DB::select("
-            SELECT
-                s.id AS stock_id,
-                s.location,
-                s.subCategory,
+        $boxes = Box::where('main_category_id', $mainCategoryId)
+            ->withCount('subcategories')
+            ->get()
+            ->map(function ($box) {
+                return [
+                    'id' => $box->id,
+                    'box_name' => $box->name,
+                    'category_quantity' => $box->subcategories_count
+                ];
+            });
 
-                GROUP_CONCAT(DISTINCT i.serialNumber) AS serial_numbers,
+        return response()->json($boxes);
+    }
 
-                COALESCE(SUM(CASE WHEN sl.type = 'IN' THEN sl.quantity END), 0) AS `IN`,
-                COALESCE(SUM(CASE WHEN sl.type = 'OUT' THEN sl.quantity END), 0) AS `OUT`,
-                COALESCE(SUM(CASE WHEN sl.type = 'DAMAGE' THEN sl.quantity END), 0) AS `DAMAGE`,
-                COALESCE(SUM(CASE WHEN sl.type = 'IN USE' THEN sl.quantity END), 0) AS `IN_USE`,
+    /*
+    ======================================================
+    2️⃣ GET SUBCATEGORY SUMMARY PER BOX
+    Columns:
+    - Subcategory
+    - stockin
+    - stockout
+    - damage
+    - inuse
+    - current items
+    ======================================================
+    */
+    public function getBoxSubcategories($boxId)
+    {
+        $subcategories = Subcategory::where('box_id', $boxId)
+            ->with(['items'])
+            ->get()
+            ->map(function ($sub) {
 
-                (
-                    COALESCE(SUM(CASE WHEN sl.type = 'IN' THEN sl.quantity END), 0)
-                    -
-                    COALESCE(SUM(CASE WHEN sl.type = 'OUT' THEN sl.quantity END), 0)
-                    -
-                    COALESCE(SUM(CASE WHEN sl.type = 'DAMAGE' THEN sl.quantity END), 0)
-                ) AS total_items,
+                $stockIn = $sub->items->count();
+                $stockOut = $sub->items->where('status', 'STOCK_OUT')->count();
+                $damage = $sub->items->where('status', 'DAMAGED')->count();
+                $inUse = $sub->items->where('status', 'IN_USE')->count();
+                $current = $sub->items->where('status', 'IN_STOCK')->count();
 
-                GROUP_CONCAT(DISTINCT sup.name) AS suppliers
+                return [
+                    'subcategory_id' => $sub->id,
+                    'subcategory_name' => $sub->name,
+                    'stockin' => $stockIn,
+                    'stockout' => $stockOut,
+                    'damage' => $damage,
+                    'inuse' => $inUse,
+                    'current_items' => $current
+                ];
+            });
 
-            FROM stocks s
-            LEFT JOIN items i       ON i.stock_id = s.id
-            LEFT JOIN stock_logs sl ON sl.item_id = i.id
-            LEFT JOIN suppliers sup ON sup.stock_id = s.id
+        return response()->json($subcategories);
+    }
 
-            WHERE s.mainCategory = 'Usher'
+    /*
+    ======================================================
+    3️⃣ GET SERIALS PER SUBCATEGORY
+    Columns:
+    - serial
+    - supplier
+    - status
+    ======================================================
+    */
+    public function getSubcategorySerials($subcategoryId)
+    {
+        $items = Item::where('subcategory_id', $subcategoryId)
+            ->with('supplier')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'serial' => $item->serial_number,
+                    'supplier' => $item->supplier->name ?? null,
+                    'status' => $item->status
+                ];
+            });
 
-            GROUP BY s.id, s.location, s.subCategory
-        ");
-
-        return response()->json($stocks);
+        return response()->json($items);
     }
 }

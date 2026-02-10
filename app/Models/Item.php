@@ -6,22 +6,27 @@ use Illuminate\Database\Eloquent\Model;
 
 class Item extends Model
 {
-
-
     protected $fillable = [
-        'name',
-        'serialNumber',
-        'description',
-        'stock_id'
+        'subcategory_id', 'box_id', 'supplier_id', 'serial_number', 'status'
     ];
 
-    public function stock()
+    public function subcategory()
     {
-        return $this->belongsTo(Stock::class, 'stock_id');
+        return $this->belongsTo(Subcategory::class);
+    }
+
+    public function box()
+    {
+        return $this->belongsTo(Box::class);
+    }
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
     }
 
     public function stockLogs()
     {
-        return $this->hasMany(StockLog::class, 'item_id');
+        return $this->hasMany(StockLog::class);
     }
 }
