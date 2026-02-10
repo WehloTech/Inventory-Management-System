@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Head } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, X, Trash2, ChevronDown } from 'lucide-react';
 
 interface SupplierInfo {
   id: string;
@@ -26,52 +26,870 @@ interface StockInItem {
   date: string;
 }
 
-interface StockInTransaction {
-  id: number;
+interface StockInDashboardEntry {
+  id: string;
+  boxName: string;
+  itemName: string;
+  date: string;
+  totalQuantity: number;
+  serialGroups: SerialNumberGroup[];
+  remarks: string;
+}
+
+// Serial Number View Modal (Image 1 Format)
+const SerialNumberViewModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
   itemName: string;
   date: string;
   quantity: number;
-  totalStock: number;
-  notes: string;
-}
+  remarks: string;
+  serialGroups: SerialNumberGroup[];
+}> = ({ isOpen, onClose, itemName, date, quantity, remarks, serialGroups }) => {
+  if (!isOpen) return null;
 
-const StockIn: StockInPageComponent = () => {
+  return (
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b-2 border-gray-300 dark:border-gray-700">
+          <button onClick={onClose} className="text-gray-900 dark:text-white font-bold text-lg hover:opacity-70">
+            &lt;Back
+          </button>
+          <div className="flex-1" />
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            <input
+              type="text"
+              placeholder="Search Serial Number"
+              className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
+            />
+          </div>
+          <button className="ml-4 px-6 py-2 border-2 border-gray-900 dark:border-white text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700">
+            MOVE
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-4">
+          {/* Item Details */}
+          <div>
+            <button onClick={onClose} className="text-blue-600 dark:text-blue-400 underline font-bold text-sm">
+              &lt;Back
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">Item name: {itemName}</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mt-2">
+                Date: {new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+              </p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mt-2">Quantity: {quantity}</p>
+            </div>
+            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
+              <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Remark:</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{remarks || '-'}</p>
+            </div>
+          </div>
+
+          {/* Serial Numbers Table */}
+          <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-100 dark:bg-gray-700 border-b-2 border-gray-300 dark:border-gray-600">
+                <tr>
+                  <th className="px-6 py-3 text-center text-sm font-bold text-gray-900 dark:text-white">Serial #</th>
+                  <th className="px-6 py-3 text-center text-sm font-bold text-gray-900 dark:text-white border-l-2 border-gray-300 dark:border-gray-600">Supplier</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y-2 divide-gray-300 dark:divide-gray-600">
+                {serialGroups.map((group) =>
+                  group.serialNumbers.map((serial, idx) => (
+                    <tr key={`${group.supplierId}-${idx}`} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-3 text-sm text-gray-900 dark:text-white text-center">{serial}</td>
+                      <td className="px-6 py-3 text-sm text-gray-900 dark:text-white text-center border-l-2 border-gray-300 dark:border-gray-600">{group.supplierName}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t-2 border-gray-300 dark:border-gray-700 flex justify-between">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 border-2 border-gray-900 dark:border-white text-gray-900 dark:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 font-bold"
+          >
+            &lt;
+          </button>
+          <button
+            onClick={onClose}
+            className="px-6 py-2 border-2 border-gray-900 dark:border-white text-gray-900 dark:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 font-bold"
+          >
+            &gt;
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Move Modal
+const MoveModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  dashboardEntries: StockInDashboardEntry[];
+  onMoveConfirm: (entry: StockInDashboardEntry, removedSerials: string[], location: string, remarks: string) => void;
+}> = ({ isOpen, onClose, dashboardEntries, onMoveConfirm }) => {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [searchItem, setSearchItem] = useState('');
+  const [selectedEntry, setSelectedEntry] = useState<StockInDashboardEntry | null>(null);
+  const [selectedSerials, setSelectedSerials] = useState<Set<string>>(new Set());
+  const [location, setLocation] = useState('');
+  const [remarks, setRemarks] = useState('');
+
+  if (!isOpen) return null;
+
+  const uniqueItems = Array.from(new Set(dashboardEntries.map((e) => e.itemName)));
+  const filteredItems = uniqueItems.filter((item) => item.toLowerCase().includes(searchItem.toLowerCase()));
+
+  const handleSelectItem = (entry: StockInDashboardEntry) => {
+    setSelectedEntry(entry);
+    setSelectedSerials(new Set());
+    setStep(2);
+  };
+
+  const handleToggleSerial = (serial: string) => {
+    const updated = new Set(selectedSerials);
+    if (updated.has(serial)) {
+      updated.delete(serial);
+    } else {
+      updated.add(serial);
+    }
+    setSelectedSerials(updated);
+  };
+
+  const handleConfirmMove = () => {
+    if (selectedEntry && selectedSerials.size > 0 && location) {
+      onMoveConfirm(selectedEntry, Array.from(selectedSerials), location, remarks);
+      setStep(1);
+      setSearchItem('');
+      setSelectedEntry(null);
+      setSelectedSerials(new Set());
+      setLocation('');
+      setRemarks('');
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b-2 border-gray-300 dark:border-gray-700">
+          <button
+            onClick={() => {
+              if (step === 1) {
+                onClose();
+              } else {
+                setStep((step - 1) as 1 | 2 | 3);
+              }
+            }}
+            className="text-gray-900 dark:text-white font-bold text-lg hover:opacity-70"
+          >
+            &lt;Back
+          </button>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Move</h2>
+          <div className="w-16" />
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-4">
+          {step === 1 && (
+            <>
+              {/* Item Name Input */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-3">Item Name:</label>
+                <input
+                  type="text"
+                  value={searchItem}
+                  onChange={(e) => setSearchItem(e.target.value)}
+                  placeholder="Raspberry Pi"
+                  className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Items Dropdown */}
+              {searchItem && filteredItems.length > 0 && (
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg max-h-64 overflow-y-auto">
+                  {filteredItems.map((itemName) => {
+                    const entry = dashboardEntries.find((e) => e.itemName === itemName);
+                    if (!entry) return null;
+
+                    return (
+                      <button
+                        key={itemName}
+                        onClick={() => handleSelectItem(entry)}
+                        className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600 last:border-b-0 text-sm text-gray-900 dark:text-white font-medium"
+                      >
+                        {itemName}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {step === 2 && selectedEntry && (
+            <>
+              {/* Item Name Display */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">Item Name:</label>
+                <input
+                  type="text"
+                  value={selectedEntry.itemName}
+                  disabled
+                  className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              {/* SN Input */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">SN:</label>
+                <input
+                  type="text"
+                  placeholder="Enter you serial number"
+                  className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Serial Numbers List */}
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg max-h-64 overflow-y-auto">
+                {selectedEntry.serialGroups.map((group) =>
+                  group.serialNumbers.map((serial, idx) => (
+                    <div
+                      key={`${group.supplierId}-${idx}`}
+                      className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-600 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSerials.has(serial)}
+                        onChange={() => handleToggleSerial(serial)}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                      <span className="text-sm text-gray-900 dark:text-white font-medium flex-1">{serial}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <button
+                onClick={() => setStep(3)}
+                className="w-full px-6 py-2 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-600"
+              >
+                Next
+              </button>
+            </>
+          )}
+
+          {step === 3 && selectedEntry && (
+            <>
+              {/* Total Quantity */}
+              <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                <p className="text-sm font-bold text-gray-900 dark:text-white">Total Quantity: {selectedSerials.size}</p>
+              </div>
+
+              {/* Move to Dropdown */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">Move to:</label>
+                <select
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select location</option>
+                  <option value="In use">In use/out/damage</option>
+                  <option value="Stock out">Stock out</option>
+                  <option value="In use">In use</option>
+                  <option value="Damage">Damage</option>
+                </select>
+              </div>
+
+              {/* Remarks */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">Remarks:</label>
+                <textarea
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  placeholder="Add remarks..."
+                  rows={4}
+                  className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              {/* List of Items */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">List of item:</label>
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700 max-h-32 overflow-y-auto">
+                  {selectedSerials.size > 0 ? (
+                    Array.from(selectedSerials).map((serial, idx) => (
+                      <p key={idx} className="text-sm text-gray-900 dark:text-white">
+                        {selectedEntry.itemName}-{serial}
+                      </p>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">No items selected</p>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={handleConfirmMove}
+                disabled={!location}
+                className="w-full px-6 py-2 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50"
+              >
+                Move Confirm
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Add Stock In Modal
+const AddStockInModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (items: StockInItem[], newSuppliers: SupplierInfo[]) => void;
+  suppliers: SupplierInfo[];
+}> = ({ isOpen, onClose, onSubmit, suppliers: initialSuppliers }) => {
+  const [items, setItems] = useState<StockInItem[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierInfo[]>(initialSuppliers);
+  const [boxName, setBoxName] = useState('');
+  const [itemName, setItemName] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [serialNumbers, setSerialNumbers] = useState<string[]>(['']);
+  const [selectedSupplier, setSelectedSupplier] = useState<SupplierInfo | null>(null);
+  const [searchSupplier, setSearchSupplier] = useState('');
+  const [showAddSupplier, setShowAddSupplier] = useState(false);
+  const [newSupplier, setNewSupplier] = useState({ name: '', email: '', contact: '' });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  if (!isOpen) return null;
+
+  const filteredSuppliers = suppliers.filter((supplier) =>
+    supplier.name.toLowerCase().includes(searchSupplier.toLowerCase())
+  );
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!boxName.trim()) newErrors.boxName = 'Box name is required';
+    if (!itemName.trim()) newErrors.itemName = 'Item name is required';
+    if (!quantity || parseInt(quantity) <= 0) newErrors.quantity = 'Quantity must be greater than 0';
+    if (!selectedSupplier) newErrors.supplier = 'Supplier is required';
+
+    const validSerials = serialNumbers.filter((s) => s.trim());
+    if (validSerials.length === 0) {
+      newErrors.serials = 'At least one serial number is required';
+    }
+    if (validSerials.length !== parseInt(quantity || '0')) {
+      newErrors.serials = `You must have ${quantity} serial number(s), got ${validSerials.length}`;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleAddNewSupplier = () => {
+    if (!newSupplier.name.trim() || !newSupplier.email.trim() || !newSupplier.contact.trim()) {
+      alert('Please fill all supplier fields');
+      return;
+    }
+
+    const createdSupplier: SupplierInfo = {
+      id: `supplier-${Date.now()}`,
+      name: newSupplier.name,
+      email: newSupplier.email,
+      contact: newSupplier.contact,
+    };
+
+    setSuppliers([...suppliers, createdSupplier]);
+    setSelectedSupplier(createdSupplier);
+    setNewSupplier({ name: '', email: '', contact: '' });
+    setShowAddSupplier(false);
+    setSearchSupplier('');
+  };
+
+  const handleAddItem = () => {
+    if (!validateForm()) return;
+
+    const qty = parseInt(quantity);
+    const validSerials = serialNumbers.filter((s) => s.trim());
+    const today = new Date().toISOString().split('T')[0];
+
+    const existingItemIndex = items.findIndex(
+      (item) => item.boxName === boxName && item.itemName === itemName && item.date === today
+    );
+
+    if (existingItemIndex !== -1) {
+      const updatedItems = [...items];
+      updatedItems[existingItemIndex].quantity += qty;
+
+      const supplierGroupIndex = updatedItems[existingItemIndex].serialGroups.findIndex(
+        (group) => group.supplierId === selectedSupplier!.id
+      );
+
+      if (supplierGroupIndex !== -1) {
+        updatedItems[existingItemIndex].serialGroups[supplierGroupIndex].serialNumbers.push(...validSerials);
+      } else {
+        updatedItems[existingItemIndex].serialGroups.push({
+          serialNumbers: validSerials,
+          supplierId: selectedSupplier!.id,
+          supplierName: selectedSupplier!.name,
+        });
+      }
+
+      setItems(updatedItems);
+    } else {
+      const newItem: StockInItem = {
+        id: `item-${Date.now()}`,
+        boxName,
+        itemName,
+        quantity: qty,
+        date: today,
+        serialGroups: [
+          {
+            serialNumbers: validSerials,
+            supplierId: selectedSupplier!.id,
+            supplierName: selectedSupplier!.name,
+          },
+        ],
+      };
+
+      setItems([...items, newItem]);
+    }
+
+    setBoxName('');
+    setItemName('');
+    setQuantity('');
+    setSerialNumbers(['']);
+    setErrors({});
+  };
+
+  const handleSerialChange = (index: number, value: string) => {
+    const newSerials = [...serialNumbers];
+    newSerials[index] = value;
+    setSerialNumbers(newSerials);
+  };
+
+  const handleRemoveItem = (id: string) => {
+    setItems(items.filter((item) => item.id !== id));
+  };
+
+  const handleSubmit = () => {
+    if (items.length === 0) {
+      alert('Please add at least one item');
+      return;
+    }
+
+    onSubmit(items, suppliers);
+
+    setItems([]);
+    setBoxName('');
+    setItemName('');
+    setQuantity('');
+    setSerialNumbers(['']);
+    setSelectedSupplier(null);
+    setSearchSupplier('');
+    setShowAddSupplier(false);
+    setErrors({});
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex">
+        {/* Left Side - Form */}
+        <div className="flex-1 overflow-y-auto p-6 border-r border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={onClose}
+              className="text-blue-600 dark:text-blue-400 underline font-semibold"
+            >
+              &lt;Back
+            </button>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Add Stock In</h2>
+            <div className="w-6" />
+          </div>
+
+          {/* Item Form Section */}
+          <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-5 space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">Box Name:</label>
+              <input
+                type="text"
+                value={boxName}
+                onChange={(e) => {
+                  setBoxName(e.target.value);
+                  if (errors.boxName) setErrors({ ...errors, boxName: '' });
+                }}
+                placeholder="Search Box Name"
+                className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.boxName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                }`}
+              />
+              {errors.boxName && <p className="text-red-500 text-xs mt-1">{errors.boxName}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">Item Name:</label>
+              <input
+                type="text"
+                value={itemName}
+                onChange={(e) => {
+                  setItemName(e.target.value);
+                  if (errors.itemName) setErrors({ ...errors, itemName: '' });
+                }}
+                placeholder="Search Item name"
+                className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.itemName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                }`}
+              />
+              {errors.itemName && <p className="text-red-500 text-xs mt-1">{errors.itemName}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">Quantity:</label>
+              <input
+                type="number"
+                value={quantity}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value) || 0;
+                  setQuantity(val.toString());
+                  if (errors.quantity) setErrors({ ...errors, quantity: '' });
+                  
+                  if (val > serialNumbers.length) {
+                    const diff = val - serialNumbers.length;
+                    setSerialNumbers([...serialNumbers, ...Array(diff).fill('')]);
+                  }
+                }}
+                placeholder="Enter Quantity"
+                min="1"
+                className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.quantity ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                }`}
+              />
+              {errors.quantity && <p className="text-red-500 text-xs mt-1">{errors.quantity}</p>}
+            </div>
+
+            {quantity && parseInt(quantity) > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">SN (Serial Numbers):</label>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {serialNumbers.slice(0, parseInt(quantity)).map((serial, index) => (
+                    <input
+                      key={index}
+                      type="text"
+                      value={serial}
+                      onChange={(e) => handleSerialChange(index, e.target.value)}
+                      placeholder={`Serial #${index + 1}`}
+                      className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ))}
+                </div>
+                {errors.serials && <p className="text-red-500 text-xs mt-1">{errors.serials}</p>}
+              </div>
+            )}
+
+            <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
+              <div className="mb-3">
+                <label className="text-sm font-medium text-gray-900 dark:text-white">Supplier:</label>
+              </div>
+
+              {!showAddSupplier ? (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={searchSupplier}
+                        onChange={(e) => setSearchSupplier(e.target.value)}
+                        placeholder="Search Supplier"
+                        className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      {searchSupplier && filteredSuppliers.length > 0 && (
+                        <div className="absolute top-full mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
+                          {filteredSuppliers.map((supplier) => (
+                            <button
+                              key={supplier.id}
+                              onClick={() => {
+                                setSelectedSupplier(supplier);
+                                setSearchSupplier('');
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600 last:border-b-0 text-sm"
+                            >
+                              {supplier.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setShowAddSupplier(true)}
+                      className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-medium text-sm"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {selectedSupplier && (
+                    <div className="p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+                      <p className="text-sm text-gray-900 dark:text-white">
+                        <span className="font-semibold">Selected:</span> {selectedSupplier.name}
+                      </p>
+                    </div>
+                  )}
+
+                  {errors.supplier && <p className="text-red-500 text-xs">{errors.supplier}</p>}
+                </div>
+              ) : (
+                <div className="space-y-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-gray-50 dark:bg-gray-700">
+                  <input
+                    type="text"
+                    value={newSupplier.name}
+                    onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
+                    placeholder="Supplier Name"
+                    className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <input
+                    type="email"
+                    value={newSupplier.email}
+                    onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
+                    placeholder="Email"
+                    className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={newSupplier.contact}
+                    onChange={(e) => setNewSupplier({ ...newSupplier, contact: e.target.value })}
+                    placeholder="Contact"
+                    className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowAddSupplier(false)}
+                      className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddNewSupplier}
+                      className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full text-sm font-medium"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleAddItem}
+              className="w-full px-6 py-3 border-2 border-gray-900 dark:border-white rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold flex items-center justify-center gap-2 mt-4"
+            >
+              <Plus size={20} />
+              Add item
+            </button>
+          </div>
+        </div>
+
+        {/* Right Side - Items List */}
+        <div className="w-80 bg-gray-50 dark:bg-gray-700 border-l border-gray-200 dark:border-gray-600 overflow-y-auto flex flex-col">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-600 flex-shrink-0">
+            <h3 className="font-bold text-gray-900 dark:text-white">Items ({items.length})</h3>
+            {items.length > 0 && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Total Qt: {items.reduce((sum, item) => sum + item.quantity, 0)}
+              </p>
+            )}
+          </div>
+
+          {items.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center p-4">
+              <p className="text-center text-gray-600 dark:text-gray-400 text-sm">No items added yet</p>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto space-y-2 p-4">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-600"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{item.itemName}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Box: {item.boxName}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Qty: {item.quantity}</p>
+                      {item.serialGroups.map((group, idx) => (
+                        <p key={idx} className="text-xs text-gray-500 dark:text-gray-500">
+                          {group.supplierName}
+                        </p>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => handleRemoveItem(item.id)}
+                      className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded flex-shrink-0"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="p-4 border-t border-gray-200 dark:border-gray-600 flex-shrink-0 space-y-2">
+            <button
+              onClick={handleSubmit}
+              disabled={items.length === 0}
+              className="w-full px-6 py-3 border-2 border-gray-900 dark:border-white rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+            >
+              Submit
+            </button>
+            <button
+              onClick={onClose}
+              className="w-full px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main Component
+const StockIn = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [dashboardEntries, setDashboardEntries] = useState<StockInDashboardEntry[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierInfo[]>([
+    { id: '1', name: 'Supplier A', email: 'supplier.a@example.com', contact: '+1234567890' },
+    { id: '2', name: 'Supplier B', email: 'supplier.b@example.com', contact: '+1987654321' },
+  ]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [selectedDate, setSelectedDate] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [serialModalOpen, setSerialModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<StockInDashboardEntry | null>(null);
 
-  const stockInTransactions: StockInTransaction[] = [
-    {
-      id: 1,
-      itemName: 'Laptop',
-      date: '2026-01-30',
-      quantity: 5,
-      totalStock: 15,
-      notes: 'Received from supplier',
-    },
-    {
-      id: 2,
-      itemName: 'Monitor',
-      date: '2026-01-28',
-      quantity: 8,
-      totalStock: 20,
-      notes: 'Stock replenishment',
-    },
-    {
-      id: 3,
-      itemName: 'Keyboard',
-      date: '2026-01-25',
-      quantity: 20,
-      totalStock: 45,
-      notes: 'Bulk order received',
-    },
-  ];
+  const handleAddItems = (items: StockInItem[], newSuppliers: SupplierInfo[]) => {
+    setSuppliers(newSuppliers);
 
-  const filteredTransactions = stockInTransactions.filter((item) =>
-    item.itemName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    const today = new Date().toISOString().split('T')[0];
+    let updatedEntries = [...dashboardEntries];
+
+    items.forEach((newItem) => {
+      const existingIndex = updatedEntries.findIndex(
+        (entry) =>
+          entry.boxName === newItem.boxName &&
+          entry.itemName === newItem.itemName &&
+          entry.date === today
+      );
+
+      if (existingIndex !== -1) {
+        updatedEntries[existingIndex].totalQuantity += newItem.quantity;
+
+        newItem.serialGroups.forEach((newGroup) => {
+          const groupIndex = updatedEntries[existingIndex].serialGroups.findIndex(
+            (group) => group.supplierId === newGroup.supplierId
+          );
+
+          if (groupIndex !== -1) {
+            updatedEntries[existingIndex].serialGroups[groupIndex].serialNumbers.push(
+              ...newGroup.serialNumbers
+            );
+          } else {
+            updatedEntries[existingIndex].serialGroups.push(newGroup);
+          }
+        });
+      } else {
+        const newEntry: StockInDashboardEntry = {
+          id: `entry-${Date.now()}`,
+          boxName: newItem.boxName,
+          itemName: newItem.itemName,
+          date: today,
+          totalQuantity: newItem.quantity,
+          serialGroups: newItem.serialGroups,
+          remarks: '',
+        };
+
+        updatedEntries = [newEntry, ...updatedEntries];
+      }
+    });
+
+    setDashboardEntries(updatedEntries);
+    setIsModalOpen(false);
+  };
+
+  const handleMoveConfirm = (entry: StockInDashboardEntry, removedSerials: string[], location: string, remarks: string) => {
+    setDashboardEntries((prev) =>
+      prev
+        .map((e) => {
+          if (e.id !== entry.id) return e;
+
+          return {
+            ...e,
+            totalQuantity: e.totalQuantity - removedSerials.length,
+            serialGroups: e.serialGroups
+              .map((group) => ({
+                ...group,
+                serialNumbers: group.serialNumbers.filter((s) => !removedSerials.includes(s)),
+              }))
+              .filter((group) => group.serialNumbers.length > 0),
+          };
+        })
+        .filter((e) => e.totalQuantity > 0)
+    );
+
+    alert(`${removedSerials.length} item(s) moved to ${location}`);
+  };
+
+  const filteredEntries = useMemo(() => {
+    return dashboardEntries.filter((entry) => {
+      const matchesSearch =
+        entry.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        entry.boxName.toLowerCase().includes(searchQuery.toLowerCase());
+
+      let matchesDate = true;
+      if (filterType === 'single' && dateFilter) {
+        matchesDate = entry.date === dateFilter;
+      } else if (filterType === 'range' && startDate && endDate) {
+        matchesDate = entry.date >= startDate && entry.date <= endDate;
+      }
+
+      return matchesSearch && matchesDate;
+    });
+  }, [dashboardEntries, searchQuery, dateFilter, filterType, startDate, endDate]);
+
+  const handleDeleteEntry = (id: string) => {
+    if (confirm('Are you sure you want to delete this entry?')) {
+      setDashboardEntries((prev) => prev.filter((entry) => entry.id !== id));
+    }
+  };
+
+  const handleViewSerials = (entry: StockInDashboardEntry) => {
+    setSelectedItem(entry);
+    setSerialModalOpen(true);
+  };
 
   return (
     <>
@@ -79,200 +897,214 @@ const StockIn: StockInPageComponent = () => {
       <SidebarProvider>
         <USHERSidebar />
         <main className="flex-1 w-full overflow-hidden flex flex-col">
-          <div className="flex items-center gap-4 p-4 border-b">
+          <div className="flex items-center gap-4 p-4 border-b border-gray-200 dark:border-gray-700">
             <SidebarTrigger />
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">STOCK IN</h1>
           </div>
-          
+
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
-              <div className="text-center">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  STOCK IN
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Record and track items deposited into inventory
-                </p>
-              </div>
+            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">STOCK IN</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Record and track items deposited into inventory
+              </p>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-auto p-6 flex flex-col">
-              <div className="w-full flex flex-col flex-1">
-                {/* Search and Add Bar */}
-                <div className="flex gap-4 mb-6 flex-col lg:flex-row">
+            <div className="flex-1 overflow-auto p-4 flex flex-col bg-gray-50 dark:bg-gray-900">
+              {/* Search and Filter Bar */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 border border-gray-200 dark:border-gray-700 space-y-3">
+                <div className="flex gap-3 flex-col lg:flex-row items-end">
                   <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+                    <Search className="absolute left-3 top-3 text-gray-400" size={18} />
                     <input
                       type="text"
-                      placeholder="Search by item name..."
+                      placeholder="Search Stock In Name"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 text-sm"
                     />
                   </div>
-                  <button className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                    <Plus size={20} />
+                  <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium text-sm whitespace-nowrap"
+                  >
                     Add Stock In
                   </button>
                 </div>
 
-                {/* Date Filter */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 border border-gray-200 dark:border-gray-700">
-                  <div className="flex gap-4 mb-4 flex-wrap">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        value="all"
-                        checked={filterType === 'all'}
-                        onChange={(e) => setFilterType(e.target.value)}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">All</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        value="single"
-                        checked={filterType === 'single'}
-                        onChange={(e) => setFilterType(e.target.value)}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Single Date</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        value="range"
-                        checked={filterType === 'range'}
-                        onChange={(e) => setFilterType(e.target.value)}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Date Range</span>
-                    </label>
-                  </div>
+                <div className="flex gap-3 items-center flex-wrap">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      value="all"
+                      checked={filterType === 'all'}
+                      onChange={(e) => setFilterType(e.target.value)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-gray-700 dark:text-gray-300">All</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      value="single"
+                      checked={filterType === 'single'}
+                      onChange={(e) => setFilterType(e.target.value)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-gray-700 dark:text-gray-300">Single Date</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      value="range"
+                      checked={filterType === 'range'}
+                      onChange={(e) => setFilterType(e.target.value)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-gray-700 dark:text-gray-300">Date Range</span>
+                  </label>
 
                   {filterType === 'single' && (
-                    <div className="flex gap-4">
+                    <div className="flex gap-2 items-center ml-auto">
                       <input
                         type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value)}
+                        className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                       />
-                      <button className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                      <button
+                        onClick={() => setDateFilter('')}
+                        className="px-3 py-1 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm"
+                      >
                         Apply
                       </button>
                     </div>
                   )}
 
                   {filterType === 'range' && (
-                    <div className="flex gap-4 flex-wrap">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
-                        <input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">End Date</label>
-                        <input
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
-                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div className="flex gap-2 items-end">
-                        <button className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                          Save
-                        </button>
-                        <button className="px-6 py-2 bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors">
-                          Cancel
-                        </button>
-                      </div>
+                    <div className="flex gap-2 items-center ml-auto">
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                      />
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                      />
+                      <button
+                        onClick={() => {
+                          setStartDate('');
+                          setEndDate('');
+                        }}
+                        className="px-3 py-1 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm"
+                      >
+                        Apply
+                      </button>
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* Table */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden flex flex-col flex-1">
-                  <div className="overflow-x-hidden flex-1 flex flex-col w-full">
-                    <table className="w-full border-collapse text-sm">
-                      <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 sticky top-0">
+              {/* Table */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Item name</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Quantity</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Remarks</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Serial #</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {filteredEntries.length === 0 ? (
                         <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[120px]">
-                            Item Name
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[110px]">
-                            Date
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[80px]">
-                            Quantity
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[100px]">
-                            Total Stock
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[150px]">
-                            Notes
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[150px]">
-                            Actions
-                          </th>
+                          <td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            No stock in entries found
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {filteredTransactions.map((item) => (
-                          <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors h-20">
-                            <td className="px-3 py-4 text-sm font-medium text-gray-900 dark:text-white">
-                              {item.itemName}
+                      ) : (
+                        filteredEntries.map((entry) => (
+                          <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">
+                              {new Date(entry.date).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              })}
                             </td>
-                            <td className="px-3 py-4 text-sm text-gray-600 dark:text-gray-300">
-                              {item.date}
-                            </td>
-                            <td className="px-3 py-4 text-sm">
-                              <span className="px-2 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                {item.quantity}
+                            <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">{entry.itemName}</td>
+                            <td className="px-6 py-4 text-sm">
+                              <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold">
+                                {entry.totalQuantity}
                               </span>
                             </td>
-                            <td className="px-3 py-4 text-sm font-semibold text-gray-900 dark:text-white">
-                              {item.totalStock}
+                            <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{entry.remarks || '-'}</td>
+                            <td className="px-6 py-4 text-sm">
+                              <button
+                                onClick={() => handleViewSerials(entry)}
+                                className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                              >
+                                View
+                              </button>
                             </td>
-                            <td className="px-3 py-4 text-sm text-gray-600 dark:text-gray-300">
-                              {item.notes}
-                            </td>
-                            <td className="px-3 py-4 text-sm text-blue-600 dark:text-blue-400">
-                              <button className="hover:underline">Withdraw</button>
-                              <span className="mx-2 text-gray-300 dark:text-gray-600">|</span>
-                              <button className="hover:underline">Deposit</button>
+                            <td className="px-6 py-4 text-sm space-x-3">
+                              <button
+                                onClick={() => setIsMoveModalOpen(true)}
+                                className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium"
+                              >
+                                Move
+                              </button>
+                              <button
+                                onClick={() => handleDeleteEntry(entry.id)}
+                                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium"
+                              >
+                                Delete
+                              </button>
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-
-                {filteredTransactions.length === 0 && (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    No stock in transactions found.
-                  </div>
-                )}
               </div>
             </div>
           </div>
         </main>
 
-        {/* Modal */}
+        {/* Add Stock In Modal */}
         <AddStockInModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSubmit={handleAddItems}
           suppliers={suppliers}
+        />
+
+        {/* Serial Number View Modal */}
+        <SerialNumberViewModal
+          isOpen={serialModalOpen}
+          onClose={() => setSerialModalOpen(false)}
+          itemName={selectedItem?.itemName || ''}
+          date={selectedItem?.date || ''}
+          quantity={selectedItem?.totalQuantity || 0}
+          remarks={selectedItem?.remarks || ''}
+          serialGroups={selectedItem?.serialGroups || []}
+        />
+
+        {/* Move Modal */}
+        <MoveModal
+          isOpen={isMoveModalOpen}
+          onClose={() => setIsMoveModalOpen(false)}
+          dashboardEntries={dashboardEntries}
+          onMoveConfirm={handleMoveConfirm}
         />
       </SidebarProvider>
     </>
