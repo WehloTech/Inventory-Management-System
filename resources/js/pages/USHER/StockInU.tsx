@@ -58,6 +58,7 @@ const AddStockInModal: React.FC<{
     contact: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showItemsList, setShowItemsList] = useState(true);
 
   if (!isOpen) return null;
 
@@ -183,6 +184,9 @@ const AddStockInModal: React.FC<{
     setQuantity('');
     setSerialNumbers(['']);
     setErrors({});
+    
+    // Show items list after adding
+    setShowItemsList(true);
   };
 
   const handleSerialChange = (index: number, value: string) => {
@@ -226,14 +230,15 @@ const AddStockInModal: React.FC<{
     setSearchSupplier('');
     setShowAddSupplier(false);
     setErrors({});
+    setShowItemsList(true);
     onClose();
   };
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[95vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
@@ -245,274 +250,289 @@ const AddStockInModal: React.FC<{
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-4">
-          {/* Item Form Section */}
-          <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-5 space-y-3">
-            {/* Box Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                Box Name:
-              </label>
-              <input
-                type="text"
-                value={boxName}
-                onChange={(e) => {
-                  setBoxName(e.target.value);
-                  if (errors.boxName) setErrors({ ...errors, boxName: '' });
-                }}
-                placeholder="Search Box Name"
-                className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.boxName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                }`}
-              />
-              {errors.boxName && <p className="text-red-500 text-xs mt-1">{errors.boxName}</p>}
-            </div>
-
-            {/* Item Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                Item Name:
-              </label>
-              <input
-                type="text"
-                value={itemName}
-                onChange={(e) => {
-                  setItemName(e.target.value);
-                  if (errors.itemName) setErrors({ ...errors, itemName: '' });
-                }}
-                placeholder="Search Item name"
-                className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.itemName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                }`}
-              />
-              {errors.itemName && <p className="text-red-500 text-xs mt-1">{errors.itemName}</p>}
-            </div>
-
-            {/* Quantity */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                Quantity:
-              </label>
-              <input
-                type="number"
-                value={quantity}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value) || 0;
-                  setQuantity(val.toString());
-                  if (errors.quantity) setErrors({ ...errors, quantity: '' });
-                  
-                  // Auto-adjust serial number fields
-                  if (val > serialNumbers.length) {
-                    const diff = val - serialNumbers.length;
-                    setSerialNumbers([...serialNumbers, ...Array(diff).fill('')]);
-                  }
-                }}
-                placeholder="Enter Quantity"
-                min="1"
-                className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.quantity ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                }`}
-              />
-              {errors.quantity && <p className="text-red-500 text-xs mt-1">{errors.quantity}</p>}
-            </div>
-
-            {/* Serial Numbers */}
-            {quantity && parseInt(quantity) > 0 && (
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-4">
+            {/* Item Form Section */}
+            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-5 space-y-3">
+              {/* Box Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                  SN (Serial Numbers):
+                  Box Name:
                 </label>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {serialNumbers.slice(0, parseInt(quantity)).map((serial, index) => (
-                    <input
-                      key={index}
-                      type="text"
-                      value={serial}
-                      onChange={(e) => handleSerialChange(index, e.target.value)}
-                      placeholder={`Enter Serial Number ${index + 1}`}
-                      className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ))}
-                </div>
-                {errors.serials && <p className="text-red-500 text-xs mt-1">{errors.serials}</p>}
-              </div>
-            )}
-
-            {/* Supplier Section */}
-            <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
-              <div className="flex items-center gap-2 mb-3">
-                <label className="text-sm font-medium text-gray-900 dark:text-white">
-                  Supplier:
-                </label>
+                <input
+                  type="text"
+                  value={boxName}
+                  onChange={(e) => {
+                    setBoxName(e.target.value);
+                    if (errors.boxName) setErrors({ ...errors, boxName: '' });
+                  }}
+                  placeholder="Search Box Name"
+                  className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.boxName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                />
+                {errors.boxName && <p className="text-red-500 text-xs mt-1">{errors.boxName}</p>}
               </div>
 
-              {!showAddSupplier ? (
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <div className="flex-1 relative">
+              {/* Item Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  Item Name:
+                </label>
+                <input
+                  type="text"
+                  value={itemName}
+                  onChange={(e) => {
+                    setItemName(e.target.value);
+                    if (errors.itemName) setErrors({ ...errors, itemName: '' });
+                  }}
+                  placeholder="Search Item name"
+                  className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.itemName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                />
+                {errors.itemName && <p className="text-red-500 text-xs mt-1">{errors.itemName}</p>}
+              </div>
+
+              {/* Quantity */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  Quantity:
+                </label>
+                <input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    setQuantity(val.toString());
+                    if (errors.quantity) setErrors({ ...errors, quantity: '' });
+                    
+                    // Auto-adjust serial number fields
+                    if (val > serialNumbers.length) {
+                      const diff = val - serialNumbers.length;
+                      setSerialNumbers([...serialNumbers, ...Array(diff).fill('')]);
+                    }
+                  }}
+                  placeholder="Enter Quantity"
+                  min="1"
+                  className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.quantity ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                />
+                {errors.quantity && <p className="text-red-500 text-xs mt-1">{errors.quantity}</p>}
+              </div>
+
+              {/* Serial Numbers */}
+              {quantity && parseInt(quantity) > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                    SN (Serial Numbers):
+                  </label>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                    {serialNumbers.slice(0, parseInt(quantity)).map((serial, index) => (
                       <input
+                        key={index}
                         type="text"
-                        value={searchSupplier}
-                        onChange={(e) => setSearchSupplier(e.target.value)}
-                        placeholder="Search Supplier"
+                        value={serial}
+                        onChange={(e) => handleSerialChange(index, e.target.value)}
+                        placeholder={`Enter Serial Number ${index + 1}`}
                         className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                      {searchSupplier && filteredSuppliers.length > 0 && (
-                        <div className="absolute top-full mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
-                          {filteredSuppliers.map((supplier) => (
-                            <button
-                              key={supplier.id}
-                              onClick={() => {
-                                setSelectedSupplier(supplier);
-                                setSearchSupplier('');
-                              }}
-                              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600 last:border-b-0 text-sm"
-                            >
-                              {supplier.name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => setShowAddSupplier(true)}
-                      className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-medium text-sm"
-                    >
-                      Add
-                    </button>
+                    ))}
                   </div>
-
-                  {selectedSupplier && (
-                    <div className="p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
-                      <p className="text-sm text-gray-900 dark:text-white">
-                        <span className="font-semibold">Selected:</span> {selectedSupplier.name}
-                      </p>
-                    </div>
-                  )}
-
-                  {errors.supplier && <p className="text-red-500 text-xs">{errors.supplier}</p>}
-                </div>
-              ) : (
-                <div className="space-y-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-gray-50 dark:bg-gray-700">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-900 dark:text-white mb-1">
-                      Name:
-                    </label>
-                    <input
-                      type="text"
-                      value={newSupplier.name}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
-                      placeholder="Enter Supplier Name"
-                      className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-900 dark:text-white mb-1">
-                      Email:
-                    </label>
-                    <input
-                      type="email"
-                      value={newSupplier.email}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
-                      placeholder="Enter Supplier Email"
-                      className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-900 dark:text-white mb-1">
-                      Contact:
-                    </label>
-                    <input
-                      type="text"
-                      value={newSupplier.contact}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, contact: e.target.value })}
-                      placeholder="Enter Supplier Contact"
-                      className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowAddSupplier(false)}
-                      className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 text-sm font-medium"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleAddNewSupplier}
-                      className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full text-sm font-medium"
-                    >
-                      Add
-                    </button>
-                  </div>
+                  {errors.serials && <p className="text-red-500 text-xs mt-1">{errors.serials}</p>}
                 </div>
               )}
+
+              {/* Supplier Section */}
+              <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <label className="text-sm font-medium text-gray-900 dark:text-white">
+                    Supplier:
+                  </label>
+                </div>
+
+                {!showAddSupplier ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <div className="flex-1 relative">
+                        <input
+                          type="text"
+                          value={searchSupplier}
+                          onChange={(e) => setSearchSupplier(e.target.value)}
+                          placeholder="Search Supplier"
+                          className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {searchSupplier && filteredSuppliers.length > 0 && (
+                          <div className="absolute top-full mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                            {filteredSuppliers.map((supplier) => (
+                              <button
+                                key={supplier.id}
+                                onClick={() => {
+                                  setSelectedSupplier(supplier);
+                                  setSearchSupplier('');
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600 last:border-b-0 text-sm"
+                              >
+                                {supplier.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setShowAddSupplier(true)}
+                        className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-medium text-sm"
+                      >
+                        Add
+                      </button>
+                    </div>
+
+                    {selectedSupplier && (
+                      <div className="p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
+                        <p className="text-sm text-gray-900 dark:text-white">
+                          <span className="font-semibold">Selected:</span> {selectedSupplier.name}
+                        </p>
+                      </div>
+                    )}
+
+                    {errors.supplier && <p className="text-red-500 text-xs">{errors.supplier}</p>}
+                  </div>
+                ) : (
+                  <div className="space-y-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-gray-50 dark:bg-gray-700">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-900 dark:text-white mb-1">
+                        Name:
+                      </label>
+                      <input
+                        type="text"
+                        value={newSupplier.name}
+                        onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
+                        placeholder="Enter Supplier Name"
+                        className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-900 dark:text-white mb-1">
+                        Email:
+                      </label>
+                      <input
+                        type="email"
+                        value={newSupplier.email}
+                        onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
+                        placeholder="Enter Supplier Email"
+                        className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-900 dark:text-white mb-1">
+                        Contact:
+                      </label>
+                      <input
+                        type="text"
+                        value={newSupplier.contact}
+                        onChange={(e) => setNewSupplier({ ...newSupplier, contact: e.target.value })}
+                        placeholder="Enter Supplier Contact"
+                        className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowAddSupplier(false)}
+                        className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 text-sm font-medium"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleAddNewSupplier}
+                        className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full text-sm font-medium"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Add Item Button */}
+              <button
+                onClick={handleAddItem}
+                className="w-full px-6 py-3 border-2 border-gray-900 dark:border-white rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold flex items-center justify-center gap-2 mt-4"
+              >
+                <Plus size={20} />
+                Add item
+              </button>
             </div>
 
-            {/* Item Summary */}
+            {/* Items List - Collapsible with Fixed Height */}
             {items.length > 0 && (
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 text-center border-2 border-gray-300 dark:border-gray-600">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  Total Qt: {items.reduce((sum, item) => sum + item.quantity, 0)}
-                </p>
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setShowItemsList(!showItemsList)}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <ChevronDown
+                      size={18}
+                      className={`transition-transform ${showItemsList ? 'rotate-180' : ''}`}
+                    />
+                    <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                      Added Items ({items.length})
+                    </span>
+                  </div>
+                  <div className="text-sm font-semibold text-blue-600">
+                    Total: {items.reduce((sum, item) => sum + item.quantity, 0)} items
+                  </div>
+                </button>
+
+                {showItemsList && (
+                  <div className="max-h-60 overflow-y-auto p-4 space-y-2">
+                    {items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg border border-gray-200 dark:border-gray-600"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                              {item.itemName}
+                            </p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                              Box: {item.boxName} | Qty: {item.quantity}
+                            </p>
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                              {item.serialGroups.map((group, idx) => (
+                                <p key={idx}>
+                                  Supplier: {group.supplierName} ({group.serialNumbers.length})
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
-
-            {/* Add Item Button */}
-            <button
-              onClick={handleAddItem}
-              className="w-full px-6 py-3 border-2 border-gray-900 dark:border-white rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold flex items-center justify-center gap-2 mt-4"
-            >
-              <Plus size={20} />
-              Add item
-            </button>
           </div>
-
-          {/* Items List */}
-          {items.length > 0 && (
-            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 space-y-2">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg border border-gray-200 dark:border-gray-600"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900 dark:text-white text-sm">
-                        {item.itemName}
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Box: {item.boxName} | Qty: {item.quantity}
-                      </p>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        {item.serialGroups.map((group, idx) => (
-                          <p key={idx}>
-                            Supplier: {group.supplierName} ({group.serialNumbers.length})
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleRemoveItem(item.id)}
-                      className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-6 flex-shrink-0">
           <button
             onClick={handleSubmit}
             disabled={items.length === 0}
             className="w-full px-6 py-3 border-2 border-gray-900 dark:border-white rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
           >
-            Submit
+            Submit ({items.length} {items.length === 1 ? 'item' : 'items'})
           </button>
         </div>
       </div>
