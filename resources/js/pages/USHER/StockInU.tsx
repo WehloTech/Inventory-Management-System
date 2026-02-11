@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Head } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { Search, Plus, X, Trash2, ChevronDown, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
+import { Search, Plus, X, Trash2, ChevronDown, ArrowLeft, AlertCircle, CheckCircle, ChevronRight } from 'lucide-react';
 
 interface SupplierInfo {
   id: string;
@@ -36,7 +36,7 @@ interface StockInDashboardEntry {
   remarks: string;
 }
 
-// Confirmation Dialog
+// Confirmation Dialog - Professional style without localhost
 const ConfirmDialog: React.FC<{
   isOpen: boolean;
   title: string;
@@ -87,25 +87,36 @@ const ConfirmDialog: React.FC<{
   );
 };
 
-// Serial Number View Modal - Original structure with pagination + Move button
+// Serial Number View Modal - Editable remarks + Move workflow
 const SerialNumberViewModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  itemName: string;
-  date: string;
-  quantity: number;
-  remarks: string;
-  serialGroups: SerialNumberGroup[];
-  onMove: (selectedSerials: string[]) => void;
-}> = ({ isOpen, onClose, itemName, date, quantity, remarks, serialGroups, onMove }) => {
+  entry: StockInDashboardEntry | null;
+  onMove: (selectedSerials: string[], location: string) => void;
+  onUpdateRemarks: (remarks: string) => void;
+}> = ({ isOpen, onClose, entry, onMove, onUpdateRemarks }) => {
+  const [remarks, setRemarks] = useState('');
   const [selectedSerials, setSelectedSerials] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+  const [showMoveStep2, setShowMoveStep2] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [remarksSaved, setRemarksSaved] = useState(false);
   const ITEMS_PER_PAGE = 5;
 
-  if (!isOpen) return null;
+  if (!isOpen || !entry) return null;
+
+  React.useEffect(() => {
+    setRemarks(entry.remarks || '');
+    setSelectedSerials(new Set());
+    setShowMoveStep2(false);
+    setSelectedLocation('');
+    setCurrentPage(1);
+    setRemarksSaved(false);
+  }, [entry, isOpen]);
 
   // Flatten all serials with their suppliers
-  const allSerials = serialGroups.flatMap((group) =>
+  const allSerials = entry.serialGroups.flatMap((group) =>
     group.serialNumbers.map((serial) => ({
       serial,
       supplier: group.supplierName,
@@ -128,125 +139,227 @@ const SerialNumberViewModal: React.FC<{
     setSelectedSerials(updated);
   };
 
-  const handleMove = () => {
+  const handleSaveRemarks = () => {
+    onUpdateRemarks(remarks);
+    setRemarksSaved(true);
+    setTimeout(() => setRemarksSaved(false), 2000);
+  };
+
+  const handleMoveClick = () => {
     if (selectedSerials.size > 0) {
-      onMove(Array.from(selectedSerials));
-      setSelectedSerials(new Set());
-      setCurrentPage(1);
-    } else {
-      alert('Please select at least one serial number');
+      setShowMoveStep2(true);
     }
   };
 
+  const handleConfirmMove = () => {
+    if (selectedSerials.size > 0 && selectedLocation) {
+      setShowConfirm(true);
+    }
+  };
+
+  const handleFinalMove = () => {
+    onMove(Array.from(selectedSerials), selectedLocation);
+    setSelectedSerials(new Set());
+    setShowMoveStep2(false);
+    setSelectedLocation('');
+    setShowConfirm(false);
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b-2 border-gray-300 dark:border-gray-700">
-          <button 
-            onClick={onClose} 
-            className="flex items-center gap-2 text-white font-bold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full transition"
-          >
-            <ArrowLeft size={20} />
-            <span>Back</span>
-          </button>
-          <div className="flex-1" />
-          <button 
-            onClick={handleMove}
-            disabled={selectedSerials.size === 0}
-            className="px-6 py-2 border-2 border-gray-900 dark:border-white text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            MOVE ({selectedSerials.size})
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-4">
-          {/* Item Details */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-bold text-gray-900 dark:text-white">Item name: {itemName}</p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mt-2">
-                Date: {new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-              </p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mt-2">Quantity: {quantity}</p>
-            </div>
-            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
-              <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Remark:</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{remarks || '-'}</p>
-            </div>
-          </div>
-
-          {/* Serial Numbers Table with Pagination */}
-          <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-100 dark:bg-gray-700 border-b-2 border-gray-300 dark:border-gray-600">
-                <tr>
-                  <th className="px-4 py-3 text-center text-sm font-bold text-gray-900 dark:text-white w-12">✓</th>
-                  <th className="px-6 py-3 text-center text-sm font-bold text-gray-900 dark:text-white">Serial #</th>
-                  <th className="px-6 py-3 text-center text-sm font-bold text-gray-900 dark:text-white border-l-2 border-gray-300 dark:border-gray-600">Supplier</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y-2 divide-gray-300 dark:divide-gray-600">
-                {paginatedSerials.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-4 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedSerials.has(item.serial)}
-                        onChange={() => handleToggleSerial(item.serial)}
-                        className="w-4 h-4 cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-6 py-3 text-sm text-gray-900 dark:text-white text-center font-medium">{item.serial}</td>
-                    <td className="px-6 py-3 text-sm text-gray-900 dark:text-white text-center border-l-2 border-gray-300 dark:border-gray-600">{item.supplier}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-3 border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50"
-                >
-                  &lt;
-                </button>
-                <div className="flex gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-1 text-xs rounded font-medium transition ${
-                        currentPage === page
-                          ? 'bg-blue-600 text-white'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50"
-                >
-                  &gt;
-                </button>
-              </div>
+    <>
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b-2 border-gray-300 dark:border-gray-700">
+            <button 
+              onClick={() => {
+                if (showMoveStep2) {
+                  setShowMoveStep2(false);
+                  setSelectedLocation('');
+                } else {
+                  onClose();
+                }
+              }}
+              className="flex items-center gap-2 text-white font-bold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full transition"
+            >
+              <ArrowLeft size={20} />
+              <span>Back</span>
+            </button>
+            <div className="flex-1" />
+            {!showMoveStep2 && (
+              <button 
+                onClick={handleMoveClick}
+                disabled={selectedSerials.size === 0}
+                className="px-6 py-2 border-2 border-gray-900 dark:border-white text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                MOVE ({selectedSerials.size})
+              </button>
             )}
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t-2 border-gray-300 dark:border-gray-700 flex justify-between">
+          {/* Content - View Mode */}
+          {!showMoveStep2 && (
+            <div className="p-6 space-y-4">
+              {/* Item Details */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">Item name: {entry.itemName}</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white mt-2">
+                    Date: {new Date(entry.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white mt-2">Quantity: {entry.totalQuantity}</p>
+                </div>
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Remark:</p>
+                  <textarea
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    placeholder="Add remarks..."
+                    rows={3}
+                    className="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-xs"
+                  />
+                  <button
+                    onClick={handleSaveRemarks}
+                    className={`mt-2 px-3 py-1 rounded-full text-xs font-medium transition ${
+                      remarksSaved
+                        ? 'bg-green-600 text-white'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    {remarksSaved ? '✓ Saved' : 'Save'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Serial Numbers Table with Pagination */}
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-100 dark:bg-gray-700 border-b-2 border-gray-300 dark:border-gray-600">
+                    <tr>
+                      <th className="px-4 py-3 text-center text-sm font-bold text-gray-900 dark:text-white w-12">✓</th>
+                      <th className="px-6 py-3 text-center text-sm font-bold text-gray-900 dark:text-white">Serial #</th>
+                      <th className="px-6 py-3 text-center text-sm font-bold text-gray-900 dark:text-white border-l-2 border-gray-300 dark:border-gray-600">Supplier</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y-2 divide-gray-300 dark:divide-gray-600">
+                    {paginatedSerials.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedSerials.has(item.serial)}
+                            onChange={() => handleToggleSerial(item.serial)}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-6 py-3 text-sm text-gray-900 dark:text-white text-center font-medium">{item.serial}</td>
+                        <td className="px-6 py-3 text-sm text-gray-900 dark:text-white text-center border-l-2 border-gray-300 dark:border-gray-600">{item.supplier}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-6 py-3 border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
+                    <button
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50"
+                    >
+                      &lt;
+                    </button>
+                    <div className="flex gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-1 text-xs rounded font-medium transition ${
+                            currentPage === page
+                              ? 'bg-blue-600 text-white'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50"
+                    >
+                      &gt;
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Content - Move Step 2 */}
+          {showMoveStep2 && (
+            <div className="p-6 space-y-4">
+              <div>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">Item: {entry.itemName}</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-white mt-2">Total Selected: {selectedSerials.size}</p>
+              </div>
+
+              {/* Move to Dropdown */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">Move to:</label>
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select location</option>
+                  <option value="In use">In use</option>
+                  <option value="Stock out">Stock out</option>
+                  <option value="Damage">Damage</option>
+                </select>
+              </div>
+
+              {/* List of Items */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">Items to Move:</label>
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700 max-h-48 overflow-y-auto">
+                  {selectedSerials.size > 0 ? (
+                    Array.from(selectedSerials).map((serial, idx) => (
+                      <p key={idx} className="text-sm text-gray-900 dark:text-white mb-1">
+                        {entry.itemName}-{serial}
+                      </p>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">No items selected</p>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={handleConfirmMove}
+                disabled={!selectedLocation || selectedSerials.size === 0}
+                className="w-full px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full font-bold disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                Proceed to Confirm
+              </button>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showConfirm}
+        title="Confirm Move"
+        message={`Are you sure you want to move ${selectedSerials.size} item(s) to ${selectedLocation}?`}
+        onConfirm={handleFinalMove}
+        onCancel={() => setShowConfirm(false)}
+        confirmText="Move"
+        cancelText="Cancel"
+      />
+    </>
   );
 };
 
@@ -490,7 +603,7 @@ const MoveModal: React.FC<{
         </div>
       </div>
 
-      {/* Confirmation Dialog for Move */}
+      {/* Confirmation Dialog for Move - No localhost */}
       <ConfirmDialog
         isOpen={showConfirm}
         title="Confirm Move"
@@ -504,7 +617,7 @@ const MoveModal: React.FC<{
   );
 };
 
-// Add Stock In Modal - keeping original structure with duplicate prevention
+// Add Stock In Modal - Box name automatically uppercase
 const AddStockInModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -566,7 +679,6 @@ const AddStockInModal: React.FC<{
 
   const handleAddNewSupplier = () => {
     if (!newSupplier.name.trim() || !newSupplier.email.trim() || !newSupplier.contact.trim()) {
-      alert('Please fill all supplier fields');
       return;
     }
 
@@ -661,7 +773,6 @@ const AddStockInModal: React.FC<{
 
   const handleSubmit = () => {
     if (items.length === 0) {
-      alert('Please add at least one item');
       return;
     }
 
@@ -706,10 +817,10 @@ const AddStockInModal: React.FC<{
                   type="text"
                   value={boxName}
                   onChange={(e) => {
-                    setBoxName(e.target.value);
+                    setBoxName(e.target.value.toUpperCase());
                     if (errors.boxName) setErrors({ ...errors, boxName: '' });
                   }}
-                  placeholder="Search Box Name"
+                  placeholder="ENTER BOX NAME"
                   className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.boxName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                   }`}
@@ -1046,7 +1157,7 @@ const StockIn = () => {
     setIsModalOpen(false);
   };
 
-  const handleMoveFromViewModal = (selectedSerials: string[]) => {
+  const handleMoveFromViewModal = (selectedSerials: string[], location: string) => {
     if (!selectedItem) return;
 
     setDashboardEntries((prev) =>
@@ -1068,7 +1179,6 @@ const StockIn = () => {
         .filter((e) => e.totalQuantity > 0)
     );
 
-    alert(`${selectedSerials.length} item(s) moved successfully`);
     setSerialModalOpen(false);
   };
 
@@ -1095,8 +1205,18 @@ const StockIn = () => {
 
       return updated.filter((e) => e.totalQuantity > 0);
     });
+  };
 
-    alert(`${removedSerials.length} item(s) moved successfully`);
+  const handleUpdateRemarks = (remarks: string) => {
+    if (!selectedItem) return;
+
+    setDashboardEntries((prev) =>
+      prev.map((entry) =>
+        entry.id === selectedItem.id ? { ...entry, remarks } : entry
+      )
+    );
+
+    setSelectedItem((prev) => (prev ? { ...prev, remarks } : null));
   };
 
   const handleDeleteEntry = (id: string) => {
@@ -1260,6 +1380,7 @@ const StockIn = () => {
 
                   {filterType === 'range' && (
                     <div className="flex gap-2 items-center ml-auto">
+                      <span className="text-gray-600 dark:text-gray-400 rounded text-sm">From:</span>
                       <input
                         type="date"
                         value={startDate}
@@ -1269,6 +1390,7 @@ const StockIn = () => {
                         }}
                         className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                       />
+                      <span className="text-gray-600 dark:text-gray-400 rounded text-sm">To:</span>
                       <input
                         type="date"
                         value={endDate}
@@ -1297,13 +1419,13 @@ const StockIn = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex-1 flex flex-col">
                 <div className="overflow-x-auto flex-1">
                   <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 sticky top-0">
+                    <thead className="bg-gray-50 dark:bg-gray-700 border-b-2 border-gray-200 dark:border-gray-600 sticky top-0">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Item name</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Quantity</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Remarks</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Serial #</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase border-r border-gray-200 dark:border-gray-600">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase border-r border-gray-200 dark:border-gray-600">Item name</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase border-r border-gray-200 dark:border-gray-600">Quantity</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase border-r border-gray-200 dark:border-gray-600">Remarks</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase border-r border-gray-200 dark:border-gray-600">Serial #</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Action</th>
                       </tr>
                     </thead>
@@ -1316,22 +1438,22 @@ const StockIn = () => {
                         </tr>
                       ) : (
                         paginatedEntries.map((entry) => (
-                          <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                            <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">
+                          <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700">
+                            <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium border-r border-gray-200 dark:border-gray-600">
                               {new Date(entry.date).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
                                 day: 'numeric',
                               })}
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">{entry.itemName}</td>
-                            <td className="px-6 py-4 text-sm">
+                            <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium border-r border-gray-200 dark:border-gray-600">{entry.itemName}</td>
+                            <td className="px-6 py-4 text-sm border-r border-gray-200 dark:border-gray-600">
                               <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold">
                                 {entry.totalQuantity}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{entry.remarks || '-'}</td>
-                            <td className="px-6 py-4 text-sm">
+                            <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 border-r border-gray-200 dark:border-gray-600">{entry.remarks || '-'}</td>
+                            <td className="px-6 py-4 text-sm border-r border-gray-200 dark:border-gray-600">
                               <button
                                 onClick={() => {
                                   setSelectedItem(entry);
@@ -1359,13 +1481,13 @@ const StockIn = () => {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <div className="px-6 py-4 border-t-2 border-gray-200 dark:border-gray-700 flex items-center justify-between">
                     <button
                       onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                       disabled={currentPage === 1}
-                      className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
+                      className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
                     >
-                      &lt;
+                      <ArrowLeft size={20} />
                     </button>
                     <div className="flex gap-1 flex-wrap justify-center">
                       {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -1385,9 +1507,9 @@ const StockIn = () => {
                     <button
                       onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                       disabled={currentPage === totalPages}
-                      className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
+                      className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
                     >
-                      &gt;
+                      <ChevronRight size={20} />
                     </button>
                   </div>
                 )}
@@ -1410,12 +1532,9 @@ const StockIn = () => {
         <SerialNumberViewModal
           isOpen={serialModalOpen}
           onClose={() => setSerialModalOpen(false)}
-          itemName={selectedItem?.itemName || ''}
-          date={selectedItem?.date || ''}
-          quantity={selectedItem?.totalQuantity || 0}
-          remarks={selectedItem?.remarks || ''}
-          serialGroups={selectedItem?.serialGroups || []}
+          entry={selectedItem}
           onMove={handleMoveFromViewModal}
+          onUpdateRemarks={handleUpdateRemarks}
         />
 
         {/* Move Modal */}
