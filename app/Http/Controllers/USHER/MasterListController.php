@@ -33,4 +33,12 @@ class MasterListController extends Controller
             'boxId' => (int) $boxId,
         ]);
     }
+
+    public function showSerials($boxId, $subcategoryId)
+    {
+        return Inertia::render('USHER/SerialNumberView', [
+            'boxId' => (int) $boxId,
+            'subcategoryId' => (int) $subcategoryId,
+        ]);
+    }
 }
