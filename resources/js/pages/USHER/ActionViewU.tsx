@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
@@ -6,6 +7,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Search, ChevronLeft, Plus, X } from 'lucide-react';
+import { Eye } from 'lucide-react';
 
 interface SerialItem {
   id: number;
@@ -192,7 +194,7 @@ const SAMPLE_BOXES: InventoryBox[] = [
 const ActionViewU: React.FC<ActionViewUProps> = ({ boxId, box }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 6;
   
   // Add Box Modal states
   const [isBoxModalOpen, setIsBoxModalOpen] = useState(false);
@@ -416,14 +418,16 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId, box }) => {
                             <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
                               {subcategory.currentStock}
                             </td>
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
-                              <button
-                                onClick={() => handleViewSerials(subcategory)}
-                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline font-medium text-sm"
-                              >
-                                View
-                              </button>
-                            </td>
+                            <td className="px-4 sm:px-6 py-3 sm:py-4 flex justify-center">
+  <button
+    onClick={() => handleViewSerials(subcategory)}
+    className="flex items-center gap-2 px-3 py-1.5 text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded font-medium text-xs sm:text-sm transition-colors whitespace-nowrap"
+  >
+    <Eye size={16} />
+    View
+  </button>
+</td>
+
                           </tr>
                         ))
                       ) : (
