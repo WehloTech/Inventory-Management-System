@@ -522,8 +522,8 @@ const MasterList: MasterListPageComponent = () => {
 
           <div className="flex-1 overflow-hidden flex flex-col">
             {/* Content */}
-            <div className="flex-1 overflow-hidden p-4 sm:p-6 flex flex-col bg-white dark:bg-gray-900">
-              <div className="w-full flex flex-col flex-1">
+            <div className="flex-1 overflow-auto p-4 sm:p-6 flex flex-col bg-white dark:bg-gray-900">
+              <div className="w-full flex flex-col">
                 {/* Search and Add Bar */}
                 <div className="flex gap-3 sm:gap-4 mb-6 flex-col sm:flex-row items-stretch sm:items-center">
                   <div className="flex-1 relative">
@@ -541,7 +541,7 @@ const MasterList: MasterListPageComponent = () => {
                   </div>
                   <button
                     onClick={() => setIsBoxModalOpen(true)}
-                    className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950"
+                    className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950 whitespace-nowrap"
                   >
                     <Plus size={20} />
                     Add Box
@@ -549,75 +549,80 @@ const MasterList: MasterListPageComponent = () => {
                 </div>
 
                 {/* Table - Responsive */}
-                <div className="overflow-x-auto border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
-                  <table className="w-full min-w-full">
-                    {/* Table Header */}
-                    <thead>
-                      <tr className="border-b border-gray-300 dark:border-gray-600">
-                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
-                          Box No.
-                        </th>
-                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
-                          Category Quantity
-                        </th>
-                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base">
-                          Action
-                        </th>
-                      </tr>
-                    </thead>
+<div className="overflow-x-auto border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 mb-4">
+  <table className="w-full">
+    {/* Table Header */}
+    <thead>
+      <tr className="border-b border-gray-300 dark:border-gray-600">
+        <th className="px-4 sm:px-6 py-3 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base whitespace-nowrap">
+          Box Name
+        </th>
+        <th className="px-4 sm:px-6 py-3 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base whitespace-nowrap">
+          Category Quantity
+        </th>
+        <th className="px-4 sm:px-6 py-3 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base whitespace-nowrap">
+          Action
+        </th>
+      </tr>
+    </thead>
 
-                    {/* Table Body */}
-                    <tbody>
-                      {paginatedBoxes.length > 0 ? (
-                        paginatedBoxes.map((box, index) => (
-                          <tr
-                            key={box.id}
-                            className="border-b border-gray-300 dark:border-gray-600 last:border-b-0 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
-                              {box.boxNumber}
-                            </td>
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
-                              {box.subcategories.length}
-                            </td>
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
-                              <div className="flex items-center justify-center gap-2 flex-wrap">
-                                <button
-                                  onClick={() => {
-                                    // Navigate to detail view page
-                                    router.visit(`/usher/master-list/${box.id}`);
-                                  }}
-                                  className="text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors"
-                                  title="View"
-                                >
-                                  <Eye size={14} />
-                                  <span className="hidden sm:inline">View</span>
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteBox(box.id)}
-                                  className="text-white bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 rounded px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors"
-                                  title="Delete"
-                                >
-                                  <Trash2 size={14} />
-                                  <span className="hidden sm:inline">Delete</span>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={3} className="px-6 py-8 text-center text-gray-600 dark:text-gray-400">
-                            No boxes found. Create one to get started!
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+    {/* Table Body */}
+    <tbody>
+      {paginatedBoxes.length > 0 ? (
+        paginatedBoxes.map((box) => (
+          <tr
+            key={box.id}
+            className="border-b border-gray-300 dark:border-gray-600 last:border-b-0 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <td className="px-4 sm:px-6 py-3 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
+              {box.boxNumber}
+            </td>
+
+            <td className="px-4 sm:px-6 py-3 text-center text-sm sm:text-base">
+              <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold inline-block">
+                {box.subcategories.length}
+              </span>
+            </td>
+
+            <td className="px-4 sm:px-6 py-3 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={() => {
+                    router.visit(`/usher/master-list/${box.id}`);
+                  }}
+                  className="text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded px-2 sm:px-3 py-1 font-medium flex items-center gap-1 text-xs sm:text-sm transition-colors whitespace-nowrap"
+                  title="View"
+                >
+                  <Eye size={14} />
+                  <span>View</span>
+                </button>
+
+                <button
+                  onClick={() => handleDeleteBox(box.id)}
+                  className="text-white bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 rounded px-2 sm:px-3 py-1 font-medium flex items-center gap-1 text-xs sm:text-sm transition-colors whitespace-nowrap"
+                  title="Delete"
+                >
+                  <Trash2 size={14} />
+                  <span>Delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        ))
+      ) : (
+        <tr>
+          <td colSpan={3} className="px-6 py-8 text-center text-gray-600 dark:text-gray-400">
+            No boxes found. Create one to get started!
+          </td>
+        </tr>
+      )}
+    </tbody>
+  </table>
+</div>
+
 
                 {/* Pagination */}
-                <div className="flex items-center justify-center gap-1 sm:gap-2 mt-4 mb-4 flex-wrap">
+                <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
