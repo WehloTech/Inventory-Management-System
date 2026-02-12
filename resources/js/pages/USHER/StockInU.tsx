@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Head } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { Search, Plus, X, Trash2, ChevronDown, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
+import { Search, Plus, Trash2, ArrowLeft, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface SupplierInfo {
   id: string;
@@ -87,170 +87,261 @@ const ConfirmDialog: React.FC<{
   );
 };
 
-// Serial Number View Modal - Original structure with pagination + Move button
+// Serial Number View Modal
 const SerialNumberViewModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  itemName: string;
-  date: string;
-  quantity: number;
-  remarks: string;
-  serialGroups: SerialNumberGroup[];
-  onMove: (selectedSerials: string[]) => void;
-}> = ({ isOpen, onClose, itemName, date, quantity, remarks, serialGroups, onMove }) => {
+  entry: StockInDashboardEntry | null;
+  onMove: (selectedSerials: string[], location: string) => void;
+  onUpdateRemarks: (remarks: string) => void;
+}> = ({ isOpen, onClose, entry, onMove, onUpdateRemarks }) => {
+  const [remarks, setRemarks] = useState('');
   const [selectedSerials, setSelectedSerials] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
   const ITEMS_PER_PAGE = 5;
 
-  if (!isOpen) return null;
+  React.useEffect(() => {
+    if (isOpen && entry) {
+      setRemarks(entry.remarks || '');
+      setSelectedSerials(new Set());
+      setCurrentPage(1);
+      setShowMoveModal(false);
+      setSelectedLocation('');
+    }
+  }, [entry?.id, isOpen]);
 
-  // Flatten all serials with their suppliers
-  const allSerials = serialGroups.flatMap((group) =>
-    group.serialNumbers.map((serial) => ({
-      serial,
-      supplier: group.supplierName,
-    }))
+  if (!isOpen || !entry) return null;
+
+  const allSerials = entry.serialGroups.flatMap((group) =>
+    group.serialNumbers.map((serial) => ({ serial, supplier: group.supplierName }))
   );
 
   const totalPages = Math.ceil(allSerials.length / ITEMS_PER_PAGE);
-  const paginatedSerials = allSerials.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const paginatedSerials = allSerials.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleToggleSerial = (serial: string) => {
     const updated = new Set(selectedSerials);
-    if (updated.has(serial)) {
-      updated.delete(serial);
-    } else {
-      updated.add(serial);
-    }
+    updated.has(serial) ? updated.delete(serial) : updated.add(serial);
     setSelectedSerials(updated);
   };
 
-  const handleMove = () => {
+  const handleSaveRemarks = () => {
+    onUpdateRemarks(remarks);
+  };
+
+  const handleMoveClick = () => {
     if (selectedSerials.size > 0) {
-      onMove(Array.from(selectedSerials));
-      setSelectedSerials(new Set());
-      setCurrentPage(1);
-    } else {
-      alert('Please select at least one serial number');
+      setShowMoveModal(true);
     }
   };
 
+  const handleConfirmMove = () => {
+    if (selectedSerials.size > 0 && selectedLocation) {
+      setShowConfirm(true);
+    }
+  };
+
+  const handleFinalMove = () => {
+    onMove(Array.from(selectedSerials), selectedLocation);
+    setShowMoveModal(false);
+    setShowConfirm(false);
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b-2 border-gray-300 dark:border-gray-700">
-          <button 
-            onClick={onClose} 
-            className="flex items-center gap-2 text-white font-bold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full transition"
-          >
-            <ArrowLeft size={20} />
-            <span>Back</span>
-          </button>
-          <div className="flex-1" />
-          <button 
-            onClick={handleMove}
-            disabled={selectedSerials.size === 0}
-            className="px-6 py-2 border-2 border-gray-900 dark:border-white text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            MOVE ({selectedSerials.size})
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-4">
-          {/* Item Details */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-bold text-gray-900 dark:text-white">Item name: {itemName}</p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mt-2">
-                Date: {new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-              </p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mt-2">Quantity: {quantity}</p>
-            </div>
-            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
-              <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Remark:</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{remarks || '-'}</p>
-            </div>
-          </div>
-
-          {/* Serial Numbers Table with Pagination */}
-          <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-100 dark:bg-gray-700 border-b-2 border-gray-300 dark:border-gray-600">
-                <tr>
-                  <th className="px-4 py-3 text-center text-sm font-bold text-gray-900 dark:text-white w-12">✓</th>
-                  <th className="px-6 py-3 text-center text-sm font-bold text-gray-900 dark:text-white">Serial #</th>
-                  <th className="px-6 py-3 text-center text-sm font-bold text-gray-900 dark:text-white border-l-2 border-gray-300 dark:border-gray-600">Supplier</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y-2 divide-gray-300 dark:divide-gray-600">
-                {paginatedSerials.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-4 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedSerials.has(item.serial)}
-                        onChange={() => handleToggleSerial(item.serial)}
-                        className="w-4 h-4 cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-6 py-3 text-sm text-gray-900 dark:text-white text-center font-medium">{item.serial}</td>
-                    <td className="px-6 py-3 text-sm text-gray-900 dark:text-white text-center border-l-2 border-gray-300 dark:border-gray-600">{item.supplier}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-3 border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50"
-                >
-                  &lt;
-                </button>
-                <div className="flex gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-1 text-xs rounded font-medium transition ${
-                        currentPage === page
-                          ? 'bg-blue-600 text-white'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50"
-                >
-                  &gt;
-                </button>
-              </div>
+    <>
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 gap-2 flex-wrap">
+            <button 
+              onClick={showMoveModal ? () => setShowMoveModal(false) : onClose} 
+              className="flex items-center gap-2 text-white font-bold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full transition whitespace-nowrap text-sm sm:text-base"
+            >
+              <ArrowLeft size={20} />
+              Back
+            </button>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white text-center flex-1 sm:flex-none">Serial #</h2>
+            {!showMoveModal && (
+              <button 
+                onClick={handleMoveClick}
+                disabled={selectedSerials.size === 0}
+                className="px-4 sm:px-6 py-2 border-2 border-gray-900 dark:border-white text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition whitespace-nowrap text-sm sm:text-base"
+              >
+                MOVE ({selectedSerials.size})
+              </button>
             )}
+            {showMoveModal && <div className="w-20 sm:w-40" />}
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t-2 border-gray-300 dark:border-gray-700 flex justify-between">
+          {/* View Mode */}
+          {!showMoveModal && (
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              {/* Item Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">Item: {entry.itemName}</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    Date: {new Date(entry.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">Qty: {entry.totalQuantity}</p>
+                </div>
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-3 sm:p-4 bg-gray-50 dark:bg-gray-700">
+                  <label className="text-sm font-bold text-gray-900 dark:text-white mb-2 block">Remarks:</label>
+                  <textarea
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    placeholder="Add remarks..."
+                    rows={3}
+                    className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+                  />
+                  <button
+                    onClick={handleSaveRemarks}
+                    className="mt-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+
+              {/* Serial Numbers Table */}
+              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-max">
+                    <thead className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                      <tr>
+                        <th className="px-3 sm:px-4 py-3 text-center text-sm font-bold text-gray-900 dark:text-white w-12">✓</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Serial #</th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Supplier</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {paginatedSerials.map((item, idx) => (
+                        <tr key={`${entry.id}-${item.serial}-${idx}`} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <td className="px-3 sm:px-4 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedSerials.has(item.serial)}
+                              onChange={() => handleToggleSerial(item.serial)}
+                              className="w-4 h-4 cursor-pointer"
+                            />
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 text-sm text-gray-900 dark:text-white font-medium">{item.serial}</td>
+                          <td className="px-3 sm:px-6 py-3 text-sm text-gray-900 dark:text-white">{item.supplier}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-3 sm:px-6 py-3 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 gap-2 flex-wrap">
+                    <button
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className="px-2 py-1 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 text-sm"
+                    >
+                      &lt;
+                    </button>
+                    <div className="flex gap-1 flex-wrap justify-center">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-2 py-1 text-xs rounded font-medium ${
+                            currentPage === page
+                              ? 'bg-blue-600 text-white'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-2 py-1 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 text-sm"
+                    >
+                      &gt;
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Move Modal - Step 3 (Direct) */}
+          {showMoveModal && (
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-300">
+                  Total Selected: {selectedSerials.size} item(s)
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">Move to:</label>
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                >
+                  <option value="">Select location</option>
+                  <option value="In use">In use</option>
+                  <option value="Stock out">Stock out</option>
+                  <option value="Damage">Damage</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">Items to Move:</label>
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700 max-h-48 overflow-y-auto">
+                  {selectedSerials.size > 0 ? (
+                    <div className="space-y-2">
+                      {Array.from(selectedSerials).map((serial, idx) => (
+                        <div key={`move-${serial}-${idx}`} className="text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 p-2 rounded">
+                          {entry.itemName} - {serial}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">No items selected</p>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={handleConfirmMove}
+                disabled={!selectedLocation || selectedSerials.size === 0}
+                className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-50 transition text-sm sm:text-base"
+              >
+                Move Confirm
+              </button>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showConfirm}
+        title="Confirm Move"
+        message={`Move ${selectedSerials.size} item(s) to ${selectedLocation}?`}
+        onConfirm={handleFinalMove}
+        onCancel={() => setShowConfirm(false)}
+        confirmText="Move"
+        cancelText="Cancel"
+      />
+    </>
   );
 };
 
-// Move Modal - Original structure with confirmation
+// Move Modal
 const MoveModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -278,11 +369,7 @@ const MoveModal: React.FC<{
 
   const handleToggleSerial = (serial: string) => {
     const updated = new Set(selectedSerials);
-    if (updated.has(serial)) {
-      updated.delete(serial);
-    } else {
-      updated.add(serial);
-    }
+    updated.has(serial) ? updated.delete(serial) : updated.add(serial);
     setSelectedSerials(updated);
   };
 
@@ -301,7 +388,6 @@ const MoveModal: React.FC<{
 
       onMoveConfirm(removedSerials);
       
-      // Reset
       setStep(1);
       setSearchItem('');
       setSelectedEntry(null);
@@ -316,9 +402,9 @@ const MoveModal: React.FC<{
   return (
     <>
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b-2 border-gray-300 dark:border-gray-700">
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 gap-2">
             <button
               onClick={() => {
                 if (step === 1) {
@@ -327,32 +413,30 @@ const MoveModal: React.FC<{
                   setStep((step - 1) as 1 | 2 | 3);
                 }
               }}
-              className="flex items-center gap-2 text-white font-bold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full transition"
+              className="flex items-center gap-2 text-white font-bold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full transition whitespace-nowrap text-sm sm:text-base"
             >
               <ArrowLeft size={20} />
-              <span>Back</span>
+              Back
             </button>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Move</h2>
-            <div className="w-32" />
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white text-center">Move</h2>
+            <div className="w-16 sm:w-32" />
           </div>
 
           {/* Content */}
-          <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
             {step === 1 && (
               <>
-                {/* Item Name Input */}
                 <div>
                   <label className="block text-sm font-bold text-gray-900 dark:text-white mb-3">Item Name:</label>
                   <input
                     type="text"
                     value={searchItem}
                     onChange={(e) => setSearchItem(e.target.value)}
-                    placeholder="Raspberry Pi"
-                    className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Search item..."
+                    className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                 </div>
 
-                {/* Items Dropdown */}
                 {searchItem && filteredItems.length > 0 && (
                   <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg max-h-64 overflow-y-auto">
                     {filteredItems.map((itemName) => {
@@ -376,51 +460,42 @@ const MoveModal: React.FC<{
 
             {step === 2 && selectedEntry && (
               <>
-                {/* Item Name Display */}
                 <div>
                   <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">Item Name:</label>
                   <input
                     type="text"
                     value={selectedEntry.itemName}
                     disabled
-                    className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                   />
                 </div>
 
-                {/* SN Input */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">SN:</label>
-                  <input
-                    type="text"
-                    placeholder="Enter you serial number"
-                    className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Serial Numbers List */}
-                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg max-h-64 overflow-y-auto">
-                  {selectedEntry.serialGroups.map((group) =>
-                    group.serialNumbers.map((serial, idx) => (
-                      <div
-                        key={`${group.supplierId}-${idx}`}
-                        className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-600 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedSerials.has(serial)}
-                          onChange={() => handleToggleSerial(serial)}
-                          className="w-4 h-4 cursor-pointer"
-                        />
-                        <span className="text-sm text-gray-900 dark:text-white font-medium flex-1">{serial}</span>
-                      </div>
-                    ))
-                  )}
+                  <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">Serial Numbers:</label>
+                  <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg max-h-64 overflow-y-auto">
+                    {selectedEntry.serialGroups.map((group) =>
+                      group.serialNumbers.map((serial, idx) => (
+                        <div
+                          key={`${group.supplierId}-${idx}`}
+                          className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-600 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedSerials.has(serial)}
+                            onChange={() => handleToggleSerial(serial)}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                          <span className="text-sm text-gray-900 dark:text-white font-medium flex-1">{serial}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
 
                 <button
                   onClick={() => setStep(3)}
                   disabled={selectedSerials.size === 0}
-                  className="w-full px-6 py-2 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50"
+                  className="w-full px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold disabled:opacity-50 text-sm sm:text-base"
                 >
                   Next
                 </button>
@@ -429,18 +504,18 @@ const MoveModal: React.FC<{
 
             {step === 3 && selectedEntry && (
               <>
-                {/* Total Quantity */}
-                <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">Total Quantity: {selectedSerials.size}</p>
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <p className="text-sm font-semibold text-blue-900 dark:text-blue-300">
+                    Total Selected: {selectedSerials.size} item(s)
+                  </p>
                 </div>
 
-                {/* Move to Dropdown */}
                 <div>
                   <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">Move to:</label>
                   <select
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   >
                     <option value="">Select location</option>
                     <option value="In use">In use</option>
@@ -449,26 +524,24 @@ const MoveModal: React.FC<{
                   </select>
                 </div>
 
-                {/* Remarks */}
                 <div>
                   <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">Remarks:</label>
                   <textarea
                     value={remarks}
                     onChange={(e) => setRemarks(e.target.value)}
                     placeholder="Add remarks..."
-                    rows={4}
-                    className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    rows={3}
+                    className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
                   />
                 </div>
 
-                {/* List of Items */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">List of item:</label>
+                  <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">Items to Move:</label>
                   <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700 max-h-32 overflow-y-auto">
                     {selectedSerials.size > 0 ? (
                       Array.from(selectedSerials).map((serial, idx) => (
-                        <p key={idx} className="text-sm text-gray-900 dark:text-white">
-                          {selectedEntry.itemName}-{serial}
+                        <p key={`confirm-${serial}-${idx}`} className="text-sm text-gray-900 dark:text-white mb-1">
+                          {selectedEntry.itemName} - {serial}
                         </p>
                       ))
                     ) : (
@@ -480,7 +553,7 @@ const MoveModal: React.FC<{
                 <button
                   onClick={handleMoveClick}
                   disabled={!location || selectedSerials.size === 0}
-                  className="w-full px-6 py-2 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50"
+                  className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-50 transition text-sm sm:text-base"
                 >
                   Move Confirm
                 </button>
@@ -490,11 +563,11 @@ const MoveModal: React.FC<{
         </div>
       </div>
 
-      {/* Confirmation Dialog for Move */}
+      {/* Confirmation Dialog */}
       <ConfirmDialog
         isOpen={showConfirm}
         title="Confirm Move"
-        message={`Are you sure you want to move ${selectedSerials.size} item(s) to ${location}?`}
+        message={`Move ${selectedSerials.size} item(s) to ${location}?`}
         onConfirm={handleConfirmMove}
         onCancel={() => setShowConfirm(false)}
         confirmText="Move"
@@ -504,7 +577,7 @@ const MoveModal: React.FC<{
   );
 };
 
-// Add Stock In Modal - keeping original structure with duplicate prevention
+// Add Stock In Modal
 const AddStockInModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -554,7 +627,6 @@ const AddStockInModal: React.FC<{
       newErrors.serials = `You must have ${quantity} serial number(s), got ${validSerials.length}`;
     }
 
-    // Check for duplicate serial numbers
     const duplicates = validSerials.filter((serial) => allExistingSerials.includes(serial));
     if (duplicates.length > 0) {
       newErrors.serials = `These serial numbers already exist: ${duplicates.join(', ')}`;
@@ -566,7 +638,6 @@ const AddStockInModal: React.FC<{
 
   const handleAddNewSupplier = () => {
     if (!newSupplier.name.trim() || !newSupplier.email.trim() || !newSupplier.contact.trim()) {
-      alert('Please fill all supplier fields');
       return;
     }
 
@@ -661,7 +732,6 @@ const AddStockInModal: React.FC<{
 
   const handleSubmit = () => {
     if (items.length === 0) {
-      alert('Please add at least one item');
       return;
     }
 
@@ -682,35 +752,35 @@ const AddStockInModal: React.FC<{
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col lg:flex-row">
           {/* Left Side - Form */}
-          <div className="flex-1 overflow-y-auto p-6 border-r border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-6 gap-2 flex-wrap">
               <button
                 onClick={onClose}
-                className="flex items-center gap-2 text-white font-bold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full transition"
+                className="flex items-center gap-2 text-white font-semibold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition whitespace-nowrap text-sm sm:text-base"
               >
-                <ArrowLeft size={20} />
+                <ArrowLeft size={18} />
                 Back
               </button>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Add Stock In</h2>
-              <div className="w-32" />
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white text-center flex-1 lg:flex-none">Add Stock In</h2>
+              <div className="w-16 sm:w-32" />
             </div>
 
             {/* Item Form Section */}
-            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-xl p-5 space-y-3">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 space-y-3 bg-gray-50 dark:bg-gray-700">
               <div>
-                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">Box Name:</label>
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">Box Name:</label>
                 <input
                   type="text"
                   value={boxName}
                   onChange={(e) => {
-                    setBoxName(e.target.value);
+                    setBoxName(e.target.value.toUpperCase());
                     if (errors.boxName) setErrors({ ...errors, boxName: '' });
                   }}
-                  placeholder="Search Box Name"
-                  className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  placeholder="ENTER BOX NAME"
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
                     errors.boxName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 />
@@ -729,7 +799,7 @@ const AddStockInModal: React.FC<{
                       if (errors.itemName) setErrors({ ...errors, itemName: '' });
                     }}
                     placeholder="Search or type item name"
-                    className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
                       errors.itemName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                     }`}
                   />
@@ -770,7 +840,7 @@ const AddStockInModal: React.FC<{
                   }}
                   placeholder="Enter Quantity"
                   min="1"
-                  className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
                     errors.quantity ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 />
@@ -787,7 +857,7 @@ const AddStockInModal: React.FC<{
                         value={serial}
                         onChange={(e) => handleSerialChange(index, e.target.value)}
                         placeholder={`Serial #${index + 1}`}
-                        className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       />
                     ))}
                   </div>
@@ -809,7 +879,7 @@ const AddStockInModal: React.FC<{
                           value={searchSupplier}
                           onChange={(e) => setSearchSupplier(e.target.value)}
                           placeholder="Search Supplier"
-                          className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         />
                         {searchSupplier && filteredSuppliers.length > 0 && (
                           <div className="absolute top-full mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
@@ -830,7 +900,7 @@ const AddStockInModal: React.FC<{
                       </div>
                       <button
                         onClick={() => setShowAddSupplier(true)}
-                        className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-medium text-sm"
+                        className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-medium text-sm whitespace-nowrap"
                       >
                         Add
                       </button>
@@ -889,7 +959,7 @@ const AddStockInModal: React.FC<{
 
               <button
                 onClick={handleAddItem}
-                className="w-full px-6 py-3 border-2 border-gray-900 dark:border-white rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold flex items-center justify-center gap-2 mt-4"
+                className="w-full px-6 py-3 border-2 border-gray-900 dark:border-white rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold flex items-center justify-center gap-2 mt-4 text-sm sm:text-base"
               >
                 <Plus size={20} />
                 Add item
@@ -898,9 +968,9 @@ const AddStockInModal: React.FC<{
           </div>
 
           {/* Right Side - Items List */}
-          <div className="w-80 bg-gray-50 dark:bg-gray-700 border-l border-gray-200 dark:border-gray-600 overflow-y-auto flex flex-col">
+          <div className="w-full lg:w-80 bg-gray-50 dark:bg-gray-700 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-600 overflow-y-auto flex flex-col max-h-[50vh] lg:max-h-full">
             <div className="p-4 border-b border-gray-200 dark:border-gray-600 flex-shrink-0">
-              <h3 className="font-bold text-gray-900 dark:text-white">Items ({items.length})</h3>
+              <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">Items ({items.length})</h3>
               {items.length > 0 && (
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   Total Qt: {items.reduce((sum, item) => sum + item.quantity, 0)}
@@ -946,13 +1016,13 @@ const AddStockInModal: React.FC<{
               <button
                 onClick={handleSubmit}
                 disabled={items.length === 0}
-                className="w-full px-6 py-3 border-2 border-gray-900 dark:border-white rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                className="w-full px-6 py-3 border-2 border-gray-900 dark:border-white rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm sm:text-base"
               >
                 Submit
               </button>
               <button
                 onClick={onClose}
-                className="w-full px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold"
+                className="w-full px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold text-sm sm:text-base"
               >
                 Cancel
               </button>
@@ -995,7 +1065,7 @@ const StockIn = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 8;
 
   const handleAddItems = (items: StockInItem[], newSuppliers: SupplierInfo[]) => {
     setSuppliers(newSuppliers);
@@ -1012,33 +1082,37 @@ const StockIn = () => {
       );
 
       if (existingIndex !== -1) {
-        updatedEntries[existingIndex].totalQuantity += newItem.quantity;
-
-        newItem.serialGroups.forEach((newGroup) => {
-          const groupIndex = updatedEntries[existingIndex].serialGroups.findIndex(
-            (group) => group.supplierId === newGroup.supplierId
-          );
-
-          if (groupIndex !== -1) {
-            updatedEntries[existingIndex].serialGroups[groupIndex].serialNumbers.push(
-              ...newGroup.serialNumbers
-            );
-          } else {
-            updatedEntries[existingIndex].serialGroups.push(newGroup);
-          }
-        });
+        // Update existing entry
+        updatedEntries[existingIndex] = {
+          ...updatedEntries[existingIndex],
+          totalQuantity: updatedEntries[existingIndex].totalQuantity + newItem.quantity,
+          serialGroups: updatedEntries[existingIndex].serialGroups.map((group) => {
+            const matchingGroup = newItem.serialGroups.find((g) => g.supplierId === group.supplierId);
+            if (matchingGroup) {
+              return {
+                ...group,
+                serialNumbers: [...group.serialNumbers, ...matchingGroup.serialNumbers],
+              };
+            }
+            return group;
+          }).concat(
+            newItem.serialGroups.filter(
+              (newGroup) =>
+                !updatedEntries[existingIndex].serialGroups.some((g) => g.supplierId === newGroup.supplierId)
+            )
+          ),
+        };
       } else {
-        const newEntry: StockInDashboardEntry = {
-          id: `entry-${Date.now()}`,
+        // Add new entry
+        updatedEntries.unshift({
+          id: `entry-${Date.now()}-${Math.random()}`,
           boxName: newItem.boxName,
           itemName: newItem.itemName,
           date: today,
           totalQuantity: newItem.quantity,
           serialGroups: newItem.serialGroups,
           remarks: '',
-        };
-
-        updatedEntries = [newEntry, ...updatedEntries];
+        });
       }
     });
 
@@ -1046,7 +1120,7 @@ const StockIn = () => {
     setIsModalOpen(false);
   };
 
-  const handleMoveFromViewModal = (selectedSerials: string[]) => {
+  const handleMoveFromViewModal = (selectedSerials: string[], location: string) => {
     if (!selectedItem) return;
 
     setDashboardEntries((prev) =>
@@ -1068,7 +1142,6 @@ const StockIn = () => {
         .filter((e) => e.totalQuantity > 0)
     );
 
-    alert(`${selectedSerials.length} item(s) moved successfully`);
     setSerialModalOpen(false);
   };
 
@@ -1095,8 +1168,18 @@ const StockIn = () => {
 
       return updated.filter((e) => e.totalQuantity > 0);
     });
+  };
 
-    alert(`${removedSerials.length} item(s) moved successfully`);
+  const handleUpdateRemarks = (remarks: string) => {
+    if (!selectedItem) return;
+
+    setDashboardEntries((prev) =>
+      prev.map((entry) =>
+        entry.id === selectedItem.id ? { ...entry, remarks } : entry
+      )
+    );
+
+    setSelectedItem((prev) => (prev ? { ...prev, remarks } : null));
   };
 
   const handleDeleteEntry = (id: string) => {
@@ -1155,15 +1238,7 @@ const StockIn = () => {
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">STOCK IN</h1>
           </div>
 
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">STOCK IN</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Record and track items deposited into inventory
-              </p>
-            </div>
-
-            <div className="flex-1 overflow-auto p-4 flex flex-col bg-gray-50 dark:bg-gray-900">
+            <div className="flex-1 overflow-hidden p-4 flex flex-col bg-gray-50 dark:bg-gray-900">
               {/* Search and Filter Bar */}
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 border border-gray-200 dark:border-gray-700 space-y-3">
                 <div className="flex gap-3 flex-col lg:flex-row items-end">
@@ -1236,7 +1311,7 @@ const StockIn = () => {
                   </label>
 
                   {filterType === 'single' && (
-                    <div className="flex gap-2 items-center ml-auto">
+                    <div className="flex gap-2 items-center ml-auto flex-wrap">
                       <input
                         type="date"
                         value={dateFilter}
@@ -1259,7 +1334,8 @@ const StockIn = () => {
                   )}
 
                   {filterType === 'range' && (
-                    <div className="flex gap-2 items-center ml-auto">
+                    <div className="flex gap-2 items-center ml-auto flex-wrap">
+                      <span className="text-gray-600 dark:text-gray-400 rounded text-sm">From:</span>
                       <input
                         type="date"
                         value={startDate}
@@ -1269,6 +1345,7 @@ const StockIn = () => {
                         }}
                         className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                       />
+                      <span className="text-gray-600 dark:text-gray-400 rounded text-sm">To:</span>
                       <input
                         type="date"
                         value={endDate}
@@ -1296,58 +1373,58 @@ const StockIn = () => {
               {/* Table */}
               <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex-1 flex flex-col">
                 <div className="overflow-x-auto flex-1">
-                  <table className="w-full">
+                  <table className="w-full min-w-max">
                     <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 sticky top-0">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Item name</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Quantity</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Remarks</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Serial #</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Action</th>
+                        <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Date</th>
+                        <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Item</th>
+                        <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Qty</th>
+                        <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase hidden sm:table-cell">Remarks</th>
+                        <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">S/N</th>
+                        <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Act</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {paginatedEntries.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                          <td colSpan={6} className="px-4 sm:px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                             No stock in entries found
                           </td>
                         </tr>
                       ) : (
                         paginatedEntries.map((entry) => (
                           <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                            <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">
+                            <td className="px-2 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-gray-900 dark:text-white font-medium whitespace-nowrap">
                               {new Date(entry.date).toLocaleDateString('en-US', {
-                                year: 'numeric',
                                 month: 'short',
                                 day: 'numeric',
                               })}
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">{entry.itemName}</td>
-                            <td className="px-6 py-4 text-sm">
-                              <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold">
+                            <td className="px-2 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-gray-900 dark:text-white font-medium truncate">{entry.itemName}</td>
+                            <td className="px-2 sm:px-4 md:px-6 py-3 text-xs sm:text-sm">
+                              <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold text-xs">
                                 {entry.totalQuantity}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{entry.remarks || '-'}</td>
-                            <td className="px-6 py-4 text-sm">
+                            <td className="px-2 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-gray-600 dark:text-gray-400 hidden sm:table-cell truncate">{entry.remarks || '-'}</td>
+                            <td className="px-2 sm:px-4 md:px-6 py-3 text-xs sm:text-sm">
                               <button
                                 onClick={() => {
                                   setSelectedItem(entry);
                                   setSerialModalOpen(true);
                                 }}
-                                className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                                className="text-blue-600 dark:text-blue-400 hover:underline font-medium whitespace-nowrap"
                               >
                                 View
                               </button>
                             </td>
-                            <td className="px-6 py-4 text-sm">
+                            <td className="px-2 sm:px-4 md:px-6 py-3 text-xs">
                               <button
                                 onClick={() => handleDeleteEntry(entry.id)}
-                                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium"
+                                className="text-white bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 rounded px-1 sm:px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors whitespace-nowrap"
                               >
-                                Delete
+                                <Trash2 size={12} />
+                                <span className="hidden sm:inline">Del</span>
                               </button>
                             </td>
                           </tr>
@@ -1359,23 +1436,23 @@ const StockIn = () => {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <div className="flex items-center justify-center gap-2 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex-wrap">
                     <button
                       onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                       disabled={currentPage === 1}
-                      className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
+                      className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 transition"
                     >
-                      &lt;
+                      <ChevronLeft size={18} />
                     </button>
-                    <div className="flex gap-1 flex-wrap justify-center">
+                    <div className="flex gap-1 sm:gap-2 flex-wrap justify-center">
                       {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                         <button
                           key={page}
                           onClick={() => setCurrentPage(page)}
-                          className={`px-3 py-1 text-sm rounded font-medium transition ${
+                          className={`px-2 sm:px-3 py-2 border-2 font-semibold rounded transition-colors text-sm ${
                             currentPage === page
-                              ? 'bg-blue-600 text-white'
-                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                              ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                              : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
                           }`}
                         >
                           {page}
@@ -1385,15 +1462,14 @@ const StockIn = () => {
                     <button
                       onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                       disabled={currentPage === totalPages}
-                      className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
+                      className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 transition"
                     >
-                      &gt;
+                      <ChevronRight size={18} />
                     </button>
                   </div>
                 )}
               </div>
             </div>
-          </div>
         </main>
 
         {/* Add Stock In Modal */}
@@ -1410,12 +1486,9 @@ const StockIn = () => {
         <SerialNumberViewModal
           isOpen={serialModalOpen}
           onClose={() => setSerialModalOpen(false)}
-          itemName={selectedItem?.itemName || ''}
-          date={selectedItem?.date || ''}
-          quantity={selectedItem?.totalQuantity || 0}
-          remarks={selectedItem?.remarks || ''}
-          serialGroups={selectedItem?.serialGroups || []}
+          entry={selectedItem}
           onMove={handleMoveFromViewModal}
+          onUpdateRemarks={handleUpdateRemarks}
         />
 
         {/* Move Modal */}
