@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
 import {
@@ -8,53 +8,17 @@ import {
 import { Search, ChevronLeft, Plus, X } from 'lucide-react';
 
 interface SerialItem {
-  id: number;
-  serialNumber: string;
+  serial: string;
   supplier: string;
-  status: 'In use' | 'Stock in' | 'Stock out' | 'Damage';
+  status: string;
 }
 
 interface SerialNumberViewProps {
   boxId: number;
-  itemName: string;
+  subcategoryId: number;
 }
 
-// Sample data - Replace with actual database queries
-const SAMPLE_BOXES_DATA: Record<number, { boxNumber: string }> = {
-  1: { boxNumber: 'BOX-001' },
-  2: { boxNumber: 'BOX-002' },
-  3: { boxNumber: 'BOX-003' },
-  4: { boxNumber: 'BOX-004' },
-  5: { boxNumber: 'BOX-005' },
-  6: { boxNumber: 'BOX-006' },
-};
-
-const SAMPLE_SERIAL_DATA: Record<string, SerialItem[]> = {
-  '1_Laptop': [
-    { id: 1, serialNumber: 'DL123456', supplier: 'Dell Inc', status: 'In use' },
-    { id: 2, serialNumber: 'DL123457', supplier: 'Dell Inc', status: 'Stock in' },
-    { id: 3, serialNumber: 'DL123458', supplier: 'Dell Inc', status: 'Damage' },
-    { id: 4, serialNumber: 'DL123459', supplier: 'Dell Inc', status: 'Stock out' },
-  ],
-  '1_Mouse': [
-    { id: 5, serialNumber: 'MS789123', supplier: 'Logitech', status: 'In use' },
-    { id: 6, serialNumber: 'MS789124', supplier: 'Logitech', status: 'Stock in' },
-  ],
-  '2_Monitor': [
-    { id: 7, serialNumber: 'MON789456', supplier: 'LG Electronics', status: 'In use' },
-    { id: 8, serialNumber: 'MON789457', supplier: 'LG Electronics', status: 'Stock in' },
-    { id: 9, serialNumber: 'MON789458', supplier: 'LG Electronics', status: 'Stock out' },
-  ],
-  '3_Keyboard': [
-    { id: 10, serialNumber: 'KEY456123', supplier: 'Logitech', status: 'In use' },
-    { id: 11, serialNumber: 'KEY456124', supplier: 'Logitech', status: 'Stock in' },
-  ],
-  '3_Keyboard Stand': [
-    { id: 12, serialNumber: 'KS456125', supplier: 'Generic', status: 'In use' },
-  ],
-};
-
-const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, itemName }) => {
+const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryId }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
@@ -72,35 +36,141 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, itemName }) 
   
   const itemsPerPage = 10;
 
-  // Get box data
-  const boxData = SAMPLE_BOXES_DATA[boxId];
-  const boxNumber = boxData?.boxNumber || `BOX-${String(boxId).padStart(3, '0')}`;
+  const [serialItems, setSerialItems] = useState<SerialItem[]>([]);
+  const [boxNumber, setBoxNumber] = useState('');
+  const [itemName, setItemName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Get serial items data
-  const allSerialItems = useMemo(() => {
-    const key = `${boxId}_${itemName}`;
-    return SAMPLE_SERIAL_DATA[key] || [];
-  }, [boxId, itemName]);
+  // Fetch serial items from API
+  useEffect(() => {
+    const fetchData = async () => {
+      // Validate props
+      if (!boxId || !subcategoryId) {
+        console.error('Missing required props:', { boxId, subcategoryId });
+        setError(`Invalid box or subcategory ID. Received: boxId=${boxId}, subcategoryId=${subcategoryId}`);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        
+        console.log('Fetching data for:', { boxId, subcategoryId });
+        
+        // Fetch serial items
+        const serialUrl = `http://localhost:8000/api/masterlist/subcategory/${subcategoryId}/serials`;
+        console.log('Fetching serials from:', serialUrl);
+        
+        const serialResponse = await fetch(serialUrl);
+        console.log('Serial response status:', serialResponse.status);
+        
+        if (!serialResponse.ok) {
+          throw new Error(`Failed to fetch serials: ${serialResponse.status}`);
+        }
+        
+        const serialData = await serialResponse.json();
+        console.log('Serial data received:', serialData);
+        console.log('Number of items:', serialData.length);
+        
+        setSerialItems(serialData);
+        
+        // Fetch box info
+        const boxUrl = 'http://localhost:8000/api/masterlist/boxes/1';
+        console.log('Fetching boxes from:', boxUrl);
+        
+        const boxResponse = await fetch(boxUrl);
+        console.log('Box response status:', boxResponse.status);
+        
+        if (!boxResponse.ok) {
+          console.warn('Failed to fetch box info, using default');
+          setBoxNumber(`Box #${boxId}`);
+        } else {
+          const boxes = await boxResponse.json();
+          console.log('Boxes received:', boxes);
+          
+          const currentBox = boxes.find((b: any) => Number(b.id) === Number(boxId));
+          console.log('Current box:', currentBox);
+          
+          if (currentBox) {
+            setBoxNumber(currentBox.box_name);
+          } else {
+            console.warn('Box not found, using default');
+            setBoxNumber(`Box #${boxId}`);
+          }
+        }
+        
+        // Fetch subcategory info
+        const subcategoryUrl = `http://localhost:8000/api/masterlist/box/${boxId}/subcategories`;
+        console.log('Fetching subcategories from:', subcategoryUrl);
+        
+        const subcategoryResponse = await fetch(subcategoryUrl);
+        console.log('Subcategory response status:', subcategoryResponse.status);
+        
+        if (!subcategoryResponse.ok) {
+          console.warn('Failed to fetch subcategory info, using default');
+          setItemName(`Item #${subcategoryId}`);
+        } else {
+          const subcategories = await subcategoryResponse.json();
+          console.log('Subcategories received:', subcategories);
+          
+          const currentSubcategory = subcategories.find(
+            (s: any) => Number(s.subcategory_id) === Number(subcategoryId)
+          );
+          console.log('Current subcategory:', currentSubcategory);
+          
+          if (currentSubcategory) {
+            setItemName(currentSubcategory.subcategory_name);
+          } else {
+            console.warn('Subcategory not found, using default');
+            setItemName(`Item #${subcategoryId}`);
+          }
+        }
+        
+        console.log('All data loaded successfully');
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setError(error instanceof Error ? error.message : 'Failed to fetch data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [boxId, subcategoryId]);
+
+  // Map API status to display status
+  const mapStatus = (apiStatus: string): string => {
+    const statusMap: Record<string, string> = {
+      'IN_STOCK': 'Stock in',
+      'IN_USE': 'In use',
+      'STOCK_OUT': 'Stock out',
+      'DAMAGE': 'Damage',
+    };
+    return statusMap[apiStatus] || apiStatus;
+  };
 
   // Apply filters
   const filteredByStatus = useMemo(() => {
     if (!filters.inStock && !filters.inUse && !filters.stockOut && !filters.damage) {
-      return allSerialItems;
+      return serialItems;
     }
     
-    return allSerialItems.filter(item => {
-      if (filters.inStock && item.status === 'Stock in') return true;
-      if (filters.inUse && item.status === 'In use') return true;
-      if (filters.stockOut && item.status === 'Stock out') return true;
-      if (filters.damage && item.status === 'Damage') return true;
+    return serialItems.filter(item => {
+      const mappedStatus = mapStatus(item.status);
+      if (filters.inStock && mappedStatus === 'Stock in') return true;
+      if (filters.inUse && mappedStatus === 'In use') return true;
+      if (filters.stockOut && mappedStatus === 'Stock out') return true;
+      if (filters.damage && mappedStatus === 'Damage') return true;
       return false;
     });
-  }, [allSerialItems, filters]);
+  }, [serialItems, filters]);
 
   // Apply search
   const filteredItems = useMemo(() => {
     return filteredByStatus.filter((item) =>
-      item.serialNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.serial.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.supplier.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [filteredByStatus, searchQuery]);
@@ -136,7 +206,7 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, itemName }) 
     }));
   };
 
-  const handleAddBox = (e: React.FormEvent) => {
+  const handleAddBox = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!boxFormData.boxNumber.trim()) {
@@ -145,19 +215,89 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, itemName }) 
       return;
     }
 
-    // Here you would typically save to database
-    // For now, just navigate to the new box (you'll need to implement this in your backend)
-    console.log('Adding new box:', boxFormData.boxNumber);
-    
-    // Close modal and reset form
-    setBoxFormData({ boxNumber: '' });
-    setBoxError('');
-    setShowBoxError(false);
-    setIsBoxModalOpen(false);
-    
-    // Navigate back to master list to see the new box
-    router.visit('/usher/master-list');
+    try {
+      const response = await fetch('http://localhost:8000/api/masterlist/boxes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          box_name: boxFormData.boxNumber,
+          main_category_id: 1,
+        }),
+      });
+
+      if (response.ok) {
+        setBoxFormData({ boxNumber: '' });
+        setBoxError('');
+        setShowBoxError(false);
+        setIsBoxModalOpen(false);
+        router.visit('/usher/master-list');
+      } else {
+        const errorData = await response.json().catch(() => null);
+        setBoxError(errorData?.message || 'Failed to create box');
+        setShowBoxError(true);
+      }
+    } catch (error) {
+      console.error('Error creating box:', error);
+      setBoxError('Failed to create box');
+      setShowBoxError(true);
+    }
   };
+
+  if (loading) {
+    return (
+      <>
+        <Head title="Loading..." />
+        <SidebarProvider>
+          <USHERSidebar />
+          <main className="flex-1 w-full overflow-hidden flex flex-col bg-white dark:bg-gray-900">
+            <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <SidebarTrigger />
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Masterlist</h1>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-gray-600 dark:text-gray-400">Loading...</div>
+            </div>
+          </main>
+        </SidebarProvider>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Head title="Error" />
+        <SidebarProvider>
+          <USHERSidebar />
+          <main className="flex-1 w-full overflow-hidden flex flex-col bg-white dark:bg-gray-900">
+            <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <SidebarTrigger />
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Masterlist</h1>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                  Error Loading Data
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  {error}
+                </p>
+                <button
+                  onClick={() => router.visit('/usher/master-list')}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Go Back to Master List
+                </button>
+              </div>
+            </div>
+          </main>
+        </SidebarProvider>
+      </>
+    );
+  }
 
   return (
     <>
@@ -249,14 +389,14 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, itemName }) 
                 {/* Box Title */}
                 <div className="mb-4 border border-gray-300 dark:border-gray-600 rounded-lg p-3">
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white text-center">
-                    {boxNumber}
+                    {boxNumber || 'Loading...'}
                   </h3>
                 </div>
 
                 {/* Item Category Title */}
                 <div className="mb-6 border border-gray-300 dark:border-gray-600 rounded-lg p-3">
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white text-center">
-                    {itemName}
+                    {itemName || 'Loading...'}
                   </h3>
                 </div>
 
@@ -283,19 +423,19 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, itemName }) 
                       {paginatedItems.length > 0 ? (
                         paginatedItems.map((item, index) => (
                           <tr
-                            key={item.id}
+                            key={`${item.serial}-${index}`}
                             className={`bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                               index !== paginatedItems.length - 1 ? 'border-b border-gray-300 dark:border-gray-600' : ''
                             }`}
                           >
                             <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
-                              {item.serialNumber}
+                              {item.serial}
                             </td>
                             <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
                               {item.supplier}
                             </td>
                             <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
-                              {item.status}
+                              {mapStatus(item.status)}
                             </td>
                           </tr>
                         ))

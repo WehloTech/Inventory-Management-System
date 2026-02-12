@@ -10,24 +10,24 @@ Route::get('/', function () {
     return Inertia::render('LandingPage');
 })->name('home');
 
-// USHER Routes
 Route::prefix('usher')->group(function () {
     Route::get('/inventory', function () {
         return Inertia::render('USHER/Inventory');
     })->name('usher.inventory');
     
+    // Master list index
     Route::get('/master-list', [MasterListController::class, 'index'])->name('usher.master-list');
     
-    // Serial Number View - MUST come BEFORE the generic {boxId} route
-    Route::get('/master-list/{boxId}/item/{itemName}', function ($boxId, $itemName) {
-        return Inertia::render('USHER/SerialNumberView', [
-            'boxId' => (int)$boxId,
-            'itemName' => urldecode($itemName),
-        ]);
-    })->name('usher.serial-number-view');
+    // IMPORTANT: More specific routes MUST come BEFORE generic routes
+    // Serial Number View - this must be before the {boxId} route
+    Route::get('/master-list/{boxId}/item/{subcategoryId}', [MasterListController::class, 'showSerials'])
+        ->name('usher.serial-number-view')
+        ->where(['boxId' => '[0-9]+', 'subcategoryId' => '[0-9]+']);
     
-    // Box Details View
-    Route::get('/master-list/{boxId}', [MasterListController::class, 'show'])->name('usher.actionviewu');
+    // Box Details View - more generic route, comes after specific routes
+    Route::get('/master-list/{boxId}', [MasterListController::class, 'show'])
+        ->name('usher.actionviewu')
+        ->where(['boxId' => '[0-9]+']);
 
     Route::get('/stock-in', function () {
         return Inertia::render('USHER/StockInU');  
@@ -57,7 +57,6 @@ Route::prefix('usher')->group(function () {
         return Inertia::render('USHER/Deployment');
     })->name('usher.deployment');
 });
-
 
 
 Route::get('/products', [PageController::class, 'products']);
