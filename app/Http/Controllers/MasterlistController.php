@@ -107,21 +107,32 @@ class MasterlistController extends Controller
     - main_category_id
     ======================================================
     */
-    public function addBox(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'main_category_id' => 'required|exists:main_categories,id'
-        ]);
+public function addBox(Request $request)
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'main_category_id' => 'required|exists:main_categories,id'
+    ]);
 
-        $box = Box::create([
-            'name' => $request->name,
-            'main_category_id' => $request->main_category_id
-        ]);
-
+    // Check if box with same name already exists in this category
+    $exists = Box::where('name', $request->name)
+                 ->where('main_category_id', $request->main_category_id)
+                 ->exists();
+    
+    if ($exists) {
         return response()->json([
-            'message' => 'Box created successfully',
-            'data' => $box
-        ], 201);
+            'message' => 'Box ID already has been taken'
+        ], 422); // 422 Unprocessable Entity
     }
+
+    $box = Box::create([
+        'name' => $request->name,
+        'main_category_id' => $request->main_category_id
+    ]);
+
+    return response()->json([
+        'message' => 'Box created successfully',
+        'data' => $box
+    ], 201);
+}
 }
