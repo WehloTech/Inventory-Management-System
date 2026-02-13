@@ -19,16 +19,24 @@ import { Link } from '@inertiajs/react';
 import { Home, ChevronDown, Package, List, LogOut, LogIn, AlertTriangle, ShoppingCart, Truck } from 'lucide-react';
 import { ThemeToggle } from '@/components/themetoggle';
 
+// System logo mapping
+const systemLogos: Record<string, string> = {
+  usher: '/usher.png',
+  usherette: '/usherrete.jpg',
+  wehlo: '/wehlo.png',
+  hoclomac: '/hoclomac.jpg',
+  all: '/ALL.png',
+};
+
 // Function to generate navigation items based on system
 const getNavItems = (system: string): NavItem[] => [
   {
-    title: 'Home', // ADDED AT THE TOP
+    title: 'Home',
     href: `/inventory/${system}/inventory`,
     icon: Home,
   },
   {
     title: 'Inventory',
-    // NO href - just a dropdown
     icon: Package,
     submenu: [
       {
@@ -99,6 +107,7 @@ export function USHERSidebar({ system }: USHERSidebarProps) {
 
   const items = getNavItems(currentSystem);
   const systemDisplayName = currentSystem.toUpperCase();
+  const systemLogo = systemLogos[currentSystem] || systemLogos.usher; // Fallback to usher logo
 
   const toggleExpanded = (title: string) => {
     setExpandedItems((prev) =>
@@ -112,12 +121,16 @@ export function USHERSidebar({ system }: USHERSidebarProps) {
       <SidebarHeader>
         <div className="flex items-center justify-between">
           <Link href={`/inventory/${currentSystem}/inventory`} className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center font-bold text-lg group-hover:shadow-lg group-hover:scale-110 transition-all">
-              {currentSystem.charAt(0).toUpperCase()}
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center group-hover:shadow-lg group-hover:scale-110 transition-all bg-white dark:bg-gray-800 p-1">
+              <img 
+                src={systemLogo} 
+                alt={systemDisplayName}
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-blue-400 transition-colors">
-                {systemDisplayName} HA
+                {systemDisplayName}
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">Inventory</p>
             </div>
@@ -192,7 +205,7 @@ export function USHERSidebar({ system }: USHERSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
 
-{/* Footer */}
+      {/* Footer */}
       <SidebarFooter className="border-t border-gray-200 dark:border-gray-700">
         <SidebarMenu>
           <SidebarMenuItem>
