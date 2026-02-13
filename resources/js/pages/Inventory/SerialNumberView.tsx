@@ -16,9 +16,11 @@ interface SerialItem {
 interface SerialNumberViewProps {
   boxId: number;
   subcategoryId: number;
+  mainCategoryId: number; // Add this
+  system: string; // Add this
 }
 
-const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryId }) => {
+const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryId, mainCategoryId, system}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
@@ -77,7 +79,8 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
         setSerialItems(serialData);
         
         // Fetch box info
-        const boxUrl = 'http://localhost:8000/api/masterlist/boxes/1';
+        const boxUrl = `/api/masterlist/boxes/${mainCategoryId}`;
+
         console.log('Fetching boxes from:', boxUrl);
         
         const boxResponse = await fetch(boxUrl);
@@ -138,7 +141,7 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
     };
 
     fetchData();
-  }, [boxId, subcategoryId]);
+  }, [boxId, subcategoryId, mainCategoryId]);
 
   // Map API status to display status
   const mapStatus = (apiStatus: string): string => {
@@ -251,7 +254,8 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
       <>
         <Head title="Loading..." />
         <SidebarProvider>
-          <USHERSidebar />
+        
+          <USHERSidebar/>
           <main className="flex-1 w-full overflow-hidden flex flex-col bg-white dark:bg-gray-900">
             <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
               <SidebarTrigger />

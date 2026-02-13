@@ -98,4 +98,30 @@ class MasterlistController extends Controller
 
         return response()->json($items);
     }
+
+        /*
+    ======================================================
+    4️⃣ ADD BOX
+    Body:
+    - name
+    - main_category_id
+    ======================================================
+    */
+    public function addBox(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'main_category_id' => 'required|exists:main_categories,id'
+        ]);
+
+        $box = Box::create([
+            'name' => $request->name,
+            'main_category_id' => $request->main_category_id
+        ]);
+
+        return response()->json([
+            'message' => 'Box created successfully',
+            'data' => $box
+        ], 201);
+    }
 }

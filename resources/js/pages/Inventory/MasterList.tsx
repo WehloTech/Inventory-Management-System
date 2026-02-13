@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { usePage } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
 import {
   SidebarProvider,
@@ -14,11 +13,16 @@ interface InventoryBox {
   category_quantity: number;
 }
 
-interface MasterListPageComponent extends React.FC {
+interface Props {
+  mainCategoryId: number;
+  system: string;
+}
+
+interface MasterListPageComponent extends React.FC<Props> {
   layout?: any;
 }
 
-const MasterList: MasterListPageComponent = () => {
+const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isBoxModalOpen, setIsBoxModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -37,13 +41,15 @@ const MasterList: MasterListPageComponent = () => {
   const [boxError, setBoxError] = useState('');
   const [showBoxError, setShowBoxError] = useState(false);
 
-  // Fetch boxes from API
+  // Get system display name
+  const systemDisplayName = system.toUpperCase();
+
+  // Fetch boxes from API using mainCategoryId from props
   useEffect(() => {
     const fetchBoxes = async () => {
       try {
         setLoading(true);
-        const mainCategoryId = 1; // You can make this dynamic based on your needs
-        const response = await fetch(`http://localhost:8000/api/masterlist/boxes/${mainCategoryId}`);
+        const response = await fetch(`/api/masterlist/boxes/${mainCategoryId}`);
         const data = await response.json();
         setInventoryBoxes(data);
       } catch (error) {
@@ -54,7 +60,7 @@ const MasterList: MasterListPageComponent = () => {
     };
 
     fetchBoxes();
-  }, []);
+  }, [mainCategoryId]); // Re-fetch when mainCategoryId changes
 
   // Filter boxes by box name
   const filteredBoxes = inventoryBoxes.filter((box) => {
@@ -96,21 +102,30 @@ const MasterList: MasterListPageComponent = () => {
     }
 
     try {
-      // Call API to create new box
-      const response = await fetch('http://localhost:8000/api/masterlist/boxes', {
+      // Call API to create new box with mainCategoryId from props
+      const response = await fetch('/api/masterlist/box', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          box_name: boxFormData.boxNumber,
-          main_category_id: 1, // Adjust based on your needs
+          name: boxFormData.boxNumber,
+          main_category_id: mainCategoryId, // Use mainCategoryId from props
         }),
       });
 
       if (response.ok) {
-        const newBox = await response.json();
-        const newBoxList = [...inventoryBoxes, newBox];
+        const result = await response.json();
+        const newBox = result.data;
+        
+        // Create the box object matching the expected structure
+        const formattedBox: InventoryBox = {
+          id: newBox.id,
+          box_name: newBox.name,
+          category_quantity: 0, // New box starts with 0 categories
+        };
+        
+        const newBoxList = [...inventoryBoxes, formattedBox];
         setInventoryBoxes(newBoxList);
         
         // Calculate which page the new box will be on
@@ -147,7 +162,7 @@ const MasterList: MasterListPageComponent = () => {
   const handleConfirmDelete = async () => {
     if (boxToDelete && deleteConfirmationInput === boxToDelete.box_name) {
       try {
-        const response = await fetch(`http://localhost:8000/api/masterlist/boxes/${boxToDelete.id}`, {
+        const response = await fetch(`/api/masterlist/box/${boxToDelete.id}`, {
           method: 'DELETE',
         });
 
@@ -181,13 +196,15 @@ const MasterList: MasterListPageComponent = () => {
   if (loading) {
     return (
       <>
-        <Head title="Master List" />
+        <Head title={`Master List - ${systemDisplayName}`} />
         <SidebarProvider>
           <USHERSidebar />
           <main className="flex-1 w-full h-screen overflow-hidden flex flex-col bg-white dark:bg-gray-900">
             <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
               <SidebarTrigger />
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Masterlist</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                Masterlist - {systemDisplayName}
+              </h1>
             </div>
             <div className="flex-1 flex items-center justify-center">
               <div className="text-gray-600 dark:text-gray-400">Loading...</div>
@@ -200,13 +217,15 @@ const MasterList: MasterListPageComponent = () => {
 
   return (
     <>
-      <Head title="Master List" />
+      <Head title={`Master List - ${systemDisplayName}`} />
       <SidebarProvider>
         <USHERSidebar />
         <main className="flex-1 w-full h-screen overflow-hidden flex flex-col bg-white dark:bg-gray-900">
           <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
             <SidebarTrigger />
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Masterlist</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+              Masterlist - {systemDisplayName}
+            </h1>
           </div>
 
           <div className="flex-1 overflow-hidden flex flex-col">
@@ -277,7 +296,8 @@ const MasterList: MasterListPageComponent = () => {
                               <div className="flex items-center justify-center gap-2">
                                 <button
                                   onClick={() => {
-                                    router.visit(`/usher/master-list/${box.id}`);
+                                    // Updated route to include system parameter
+                                    router.visit(`/inventory/${system}/master-list/box/${box.id}`);
                                   }}
                                   className="text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded px-2 sm:px-3 py-1 font-medium flex items-center gap-1 text-xs sm:text-sm transition-colors whitespace-nowrap"
                                   title="View"
@@ -310,39 +330,41 @@ const MasterList: MasterListPageComponent = () => {
                 </div>
 
                 {/* Pagination */}
-                <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
-                  <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                  >
-                    &lt;
-                  </button>
+                {totalPages > 0 && (
+                  <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
+                    <button
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                    >
+                      &lt;
+                    </button>
 
-                  <div className="flex gap-1 sm:gap-2">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`px-2 sm:px-3 py-2 border-2 font-semibold rounded transition-colors text-sm ${
-                          currentPage === page
-                            ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
-                            : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
+                    <div className="flex gap-1 sm:gap-2">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-2 sm:px-3 py-2 border-2 font-semibold rounded transition-colors text-sm ${
+                            currentPage === page
+                              ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                              : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                    >
+                      &gt;
+                    </button>
                   </div>
-
-                  <button
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                  >
-                    &gt;
-                  </button>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -402,7 +424,7 @@ const MasterList: MasterListPageComponent = () => {
                     </label>
                     <span className="hidden sm:block text-gray-900 dark:text-white font-bold">:</span>
                     <div className="flex-1 px-4 py-2 border-2 border-gray-900 dark:border-gray-100 rounded-2xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white font-medium">
-                      USHER
+                      {systemDisplayName}
                     </div>
                   </div>
                 </form>

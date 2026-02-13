@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -19,49 +19,53 @@ import { Link } from '@inertiajs/react';
 import { Home, ChevronDown, Package, List, LogOut, LogIn, AlertTriangle, ShoppingCart, Truck } from 'lucide-react';
 import { ThemeToggle } from '@/components/themetoggle';
 
-// ===== NAVIGATION ITEMS CONFIGURATION =====
-// Change the order/items here and it updates everywhere!
-export const usherNavItems: NavItem[] = [
+// Function to generate navigation items based on system
+const getNavItems = (system: string): NavItem[] => [
+  {
+    title: 'Home', // ADDED AT THE TOP
+    href: `/inventory/${system}/inventory`,
+    icon: Home,
+  },
   {
     title: 'Inventory',
-    href: '/usher/inventory',
+    // NO href - just a dropdown
     icon: Package,
     submenu: [
       {
         title: 'Master List',
-        href: '/usher/master-list',
+        href: `/inventory/${system}/master-list`,
         icon: List,
       },
       {
         title: 'Stock In',
-        href: '/usher/stock-in',
+        href: `/inventory/${system}/stock-in`,
         icon: LogIn,
       },
       {
         title: 'Stock Out',
-        href: '/usher/stock-out',
+        href: `/inventory/${system}/stock-out`,
         icon: LogOut,
       },
       {
         title: 'In Use',
-        href: '/usher/in-use',
+        href: `/inventory/${system}/in-use`,
         icon: AlertTriangle,
       },
       {
         title: 'Damaged',
-        href: '/usher/damaged',
+        href: `/inventory/${system}/damaged`,
         icon: AlertTriangle,
       },
     ],
   },
   {
     title: 'Purchase Order',
-    href: '/usher/purchase-order',
+    href: `/inventory/${system}/purchase-order`,
     icon: ShoppingCart,
   },
   {
     title: 'Deployment',
-    href: '/usher/deployment',
+    href: `/inventory/${system}/deployment`,
     icon: Truck,
   },
 ];
@@ -71,12 +75,30 @@ interface NavItemWithSubmenu extends NavItem {
 }
 
 interface USHERSidebarProps {
-  items?: NavItemWithSubmenu[];
+  system?: string;
 }
 
-export function USHERSidebar({ items = usherNavItems }: USHERSidebarProps) {
+export function USHERSidebar({ system }: USHERSidebarProps) {
   const { isCurrentUrl } = useCurrentUrl();
   const [expandedItems, setExpandedItems] = useState<string[]>(['Inventory']);
+  const [currentSystem, setCurrentSystem] = useState<string>('usher');
+
+  // Detect system from URL if not provided as prop
+  useEffect(() => {
+    if (system) {
+      setCurrentSystem(system);
+    } else {
+      // Extract system from current URL
+      const path = window.location.pathname;
+      const match = path.match(/\/inventory\/([^\/]+)/);
+      if (match && match[1]) {
+        setCurrentSystem(match[1]);
+      }
+    }
+  }, [system]);
+
+  const items = getNavItems(currentSystem);
+  const systemDisplayName = currentSystem.toUpperCase();
 
   const toggleExpanded = (title: string) => {
     setExpandedItems((prev) =>
@@ -89,13 +111,13 @@ export function USHERSidebar({ items = usherNavItems }: USHERSidebarProps) {
       {/* Header */}
       <SidebarHeader>
         <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
+          <Link href={`/inventory/${currentSystem}/inventory`} className="flex items-center gap-3 group">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center font-bold text-lg group-hover:shadow-lg group-hover:scale-110 transition-all">
-              U
+              {currentSystem.charAt(0).toUpperCase()}
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-blue-400 transition-colors">
-                USHER
+                {systemDisplayName} HA
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">Inventory</p>
             </div>
@@ -116,14 +138,13 @@ export function USHERSidebar({ items = usherNavItems }: USHERSidebarProps) {
                 <SidebarMenuItem key={item.title}>
                   <div className="flex items-center gap-0 w-full">
                     {item.href ? (
-                      
-                      <a
+                      <Link
                         href={item.href}
                         className="flex-1 flex items-center gap-2 px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white transition-all"
                       >
                         {item.icon && <item.icon size={20} />}
                         <span className="font-medium text-base">{item.title}</span>
-                      </a>
+                      </Link>
                     ) : (
                       <button
                         onClick={() => toggleExpanded(item.title)}
@@ -152,13 +173,13 @@ export function USHERSidebar({ items = usherNavItems }: USHERSidebarProps) {
                       {item.submenu.map((subitem) => (
                         subitem.href && (
                           <SidebarMenuSubItem key={subitem.title}>
-                            <a
+                            <Link
                               href={subitem.href}
                               className="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white transition-all"
                             >
                               {subitem.icon && <subitem.icon size={16} />}
                               <span className="text-base">{subitem.title}</span>
-                            </a>
+                            </Link>
                           </SidebarMenuSubItem>
                         )
                       ))}
@@ -171,14 +192,14 @@ export function USHERSidebar({ items = usherNavItems }: USHERSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer */}
+{/* Footer */}
       <SidebarFooter className="border-t border-gray-200 dark:border-gray-700">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link href="/" prefetch className="flex-1">
-                <Home size={20} />
-                <span className="text-base">Back to Home</span>
+              <Link href="/">
+                <Package size={20} />
+                <span className="text-base">Back to Inventory</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

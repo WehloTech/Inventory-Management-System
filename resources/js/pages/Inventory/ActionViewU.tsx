@@ -18,10 +18,12 @@ interface AlphabetSubcategory {
 }
 
 interface ActionViewUProps {
-  boxId?: number;
+  boxId: number;
+  mainCategoryId: number;
+  system: string;
 }
 
-const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
+const ActionViewU: React.FC<ActionViewUProps> = ({ boxId, mainCategoryId, system }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
@@ -36,6 +38,9 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
   const [boxNumber, setBoxNumber] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // Get system display name
+  const systemDisplayName = system.toUpperCase();
+
   // Fetch subcategories from API
   useEffect(() => {
     const fetchSubcategories = async () => {
@@ -43,12 +48,12 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
       
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:8000/api/masterlist/box/${boxId}/subcategories`);
+        const response = await fetch(`/api/masterlist/box/${boxId}/subcategories`);
         const data = await response.json();
         setSubcategories(data);
         
-        // Fetch box info
-        const boxResponse = await fetch(`http://localhost:8000/api/masterlist/boxes/1`); // Adjust mainCategoryId as needed
+        // Fetch box info using mainCategoryId from props
+        const boxResponse = await fetch(`/api/masterlist/boxes/${mainCategoryId}`);
         const boxes = await boxResponse.json();
         const currentBox = boxes.find((b: any) => b.id === boxId);
         if (currentBox) {
@@ -62,7 +67,7 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
     };
 
     fetchSubcategories();
-  }, [boxId]);
+  }, [boxId, mainCategoryId]);
 
   // Filter subcategories based on search
   const filteredSubcategories = useMemo(() => {
@@ -83,7 +88,8 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
   };
 
   const handleViewSerials = (subcategory: AlphabetSubcategory) => {
-    router.visit(`/usher/master-list/${boxId}/item/${subcategory.subcategory_id}`);
+    // Updated route with system parameter
+    router.visit(`/inventory/${system}/master-list/box/${boxId}/item/${subcategory.subcategory_id}`);
   };
 
   const handleBoxInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,14 +110,14 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/masterlist/boxes', {
+      const response = await fetch('/api/masterlist/box', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          box_name: boxFormData.boxNumber,
-          main_category_id: 1,
+          name: boxFormData.boxNumber,
+          main_category_id: mainCategoryId, // Use mainCategoryId from props
         }),
       });
 
@@ -120,7 +126,8 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
         setBoxError('');
         setShowBoxError(false);
         setIsBoxModalOpen(false);
-        router.visit('/usher/master-list');
+        // Navigate back to master list with system parameter
+        router.visit(`/inventory/${system}/master-list`);
       } else {
         setBoxError('Failed to create box');
         setShowBoxError(true);
@@ -141,7 +148,9 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
           <main className="flex-1 w-full overflow-hidden flex flex-col bg-white dark:bg-gray-900">
             <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
               <SidebarTrigger />
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Masterlist</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                Masterlist - {systemDisplayName}
+              </h1>
             </div>
             <div className="flex-1 flex items-center justify-center">
               <div className="text-gray-600 dark:text-gray-400">Loading...</div>
@@ -161,7 +170,9 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
           <main className="flex-1 w-full overflow-hidden flex flex-col bg-white dark:bg-gray-900">
             <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
               <SidebarTrigger />
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Masterlist</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                Masterlist - {systemDisplayName}
+              </h1>
             </div>
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
@@ -172,7 +183,7 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
                   The box you're looking for doesn't exist.
                 </p>
                 <button
-                  onClick={() => router.visit('/usher/master-list')}
+                  onClick={() => router.visit(`/inventory/${system}/master-list`)}
                   className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                 >
                   Go Back to Masterlist
@@ -189,13 +200,13 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
     <>
       <Head title={`${boxNumber} - Details`} />
       <SidebarProvider>
-        <USHERSidebar />
+        <USHERSidebar system={system} />
         <main className="flex-1 w-full overflow-hidden flex flex-col bg-white dark:bg-gray-900">
           {/* Header */}
           <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
             <SidebarTrigger />
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              {boxNumber}
+              {boxNumber} - {systemDisplayName}
             </h1>
           </div>
 
@@ -322,7 +333,7 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
                 <div className="flex items-center justify-between mt-6 flex-wrap gap-4">
                   {/* Back Link - Left Side */}
                   <button
-                    onClick={() => router.visit('/usher/master-list')}
+                    onClick={() => router.visit(`/inventory/${system}/master-list`)}
                     className="flex items-center gap-2 text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 font-medium text-sm sm:text-base group"
                   >
                     <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
@@ -330,39 +341,41 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
                   </button>
 
                   {/* Pagination - Center */}
-                  <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
-                    <button
-                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                      disabled={currentPage === 1}
-                      className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                    >
-                      &lt;
-                    </button>
+                  {totalPages > 0 && (
+                    <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
+                      <button
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                      >
+                        &lt;
+                      </button>
 
-                    <div className="flex gap-1 sm:gap-2">
-                      {Array.from({ length: totalPages || 1 }, (_, i) => i + 1).map((page) => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`px-2 sm:px-3 py-2 border-2 font-semibold rounded transition-colors text-sm ${
-                            currentPage === page
-                              ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
-                              : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
+                      <div className="flex gap-1 sm:gap-2">
+                        {Array.from({ length: totalPages || 1 }, (_, i) => i + 1).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`px-2 sm:px-3 py-2 border-2 font-semibold rounded transition-colors text-sm ${
+                              currentPage === page
+                                ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                                : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                      >
+                        &gt;
+                      </button>
                     </div>
-
-                    <button
-                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                      disabled={currentPage === totalPages}
-                      className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                    >
-                      &gt;
-                    </button>
-                  </div>
+                  )}
 
                   {/* Empty div for spacing balance */}
                   <div className="w-[100px] hidden sm:block"></div>
@@ -426,7 +439,7 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId }) => {
                     </label>
                     <span className="hidden sm:block text-gray-900 dark:text-white font-bold">:</span>
                     <div className="flex-1 px-4 py-2 border-2 border-gray-900 dark:border-gray-100 rounded-2xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white font-medium">
-                      USHER
+                      {systemDisplayName}
                     </div>
                   </div>
                 </form>

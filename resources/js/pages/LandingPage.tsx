@@ -15,31 +15,31 @@ const LandingPage: LandingPageComponent = () => {
     { 
       id: 'usher', 
       label: 'USHER', 
-      path: '/usher/inventory',
+      path: '/inventory/usher/master-list',
       icon: '/usher.png'
     },
     { 
       id: 'usherette', 
       label: 'USHERETTE', 
-      path: '/usherette',
+      path: '/inventory/usherette/master-list',
       icon: '/usherrete.jpg'
     },
     { 
       id: 'wehlo', 
       label: 'WEHLO', 
-      path: '/wehlo',
+      path: '/inventory/wehlo/master-list',
       icon: '/wehlo.png'
     },
     { 
       id: 'hoclomac', 
       label: 'HOCLOMAC', 
-      path: '/hoclomac',
+      path: '/inventory/hoclomac/master-list',
       icon: '/hoclomac.jpg'
     },
     { 
       id: 'all', 
       label: 'ALL', 
-      path: '/all',
+      path: '/inventory/all/master-list',
       icon: '/ALL.png'
     },
   ];
@@ -54,7 +54,6 @@ const LandingPage: LandingPageComponent = () => {
       </div>
 
       <div className="w-full max-w-6xl">
-
         {/* Heading */}
         <h1 className={`text-5xl font-bold text-center mb-16 transition-colors duration-300 ${
           isDark ? 'text-white' : 'text-black'

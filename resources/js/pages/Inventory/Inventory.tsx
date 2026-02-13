@@ -6,27 +6,30 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 
-interface InventoryPageComponent extends React.FC {
-  layout?: any;
+interface InventoryProps {
+  system: string;
+  mainCategoryId: number;
 }
 
-const Inventory: InventoryPageComponent = () => {
+const Inventory: React.FC<InventoryProps> = ({ system, mainCategoryId }) => {
+  const systemDisplayName = system.toUpperCase();
+  
   return (
     <>
-      <Head title="USHER Inventory System" />
+      <Head title={`${systemDisplayName} Inventory System`} />
       <SidebarProvider>
-        <USHERSidebar />
+        <USHERSidebar system={system} />
         <main className="flex-1 w-full overflow-hidden">
           <div className="flex items-center justify-between gap-4 p-4 border-b">
             <div className="flex items-center gap-4">
               <SidebarTrigger />
-              <h1 className="text-xl font-bold">USHER Inventory System</h1>
+              <h1 className="text-xl font-bold">{systemDisplayName} Inventory System</h1>
             </div>
           </div>
           
           <div className="w-full h-full flex flex-col items-center justify-start p-6 pt-20">
             <h1 className="text-5xl font-bold text-gray-900 dark:text-white text-center">
-              Welcome to USHER
+              Welcome to {systemDisplayName}
             </h1>
           </div>
         </main>
