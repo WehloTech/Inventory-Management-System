@@ -38,15 +38,12 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
   const [boxFormData, setBoxFormData] = useState({
     boxNumber: '',
   });
-  
 
   const [boxError, setBoxError] = useState('');
   const [showBoxError, setShowBoxError] = useState(false);
 
-  // Get system display name
   const systemDisplayName = system.toUpperCase();
 
-  // Fetch boxes from API using mainCategoryId from props
   useEffect(() => {
     const fetchBoxes = async () => {
       try {
@@ -62,15 +59,13 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
     };
 
     fetchBoxes();
-  }, [mainCategoryId]); // Re-fetch when mainCategoryId changes
+  }, [mainCategoryId]);
 
-  // Filter boxes by box name
   const filteredBoxes = inventoryBoxes.filter((box) => {
     const query = searchQuery.toLowerCase();
     return box.box_name.toLowerCase().includes(query);
   });
 
-  // Pagination
   const totalPages = Math.ceil(filteredBoxes.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedBoxes = filteredBoxes.slice(startIndex, startIndex + itemsPerPage);
@@ -85,11 +80,8 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
 
   const handleBoxAdded = (newBox?: InventoryBox) => {
     if (newBox) {
-      // Add the new box to the list
       const newBoxList = [...inventoryBoxes, newBox];
       setInventoryBoxes(newBoxList);
-      
-      // Calculate which page the new box will be on
       const newTotalPages = Math.ceil(newBoxList.length / itemsPerPage);
       setCurrentPage(newTotalPages);
     }
@@ -117,15 +109,10 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
         if (response.ok) {
           const newBoxList = inventoryBoxes.filter((b) => b.id !== boxToDelete.id);
           setInventoryBoxes(newBoxList);
-          
-          // Recalculate total pages after deletion
           const newTotalPages = Math.ceil(newBoxList.length / itemsPerPage);
-          
-          // If current page is greater than new total pages, go to the last page
           if (currentPage > newTotalPages) {
             setCurrentPage(Math.max(1, newTotalPages));
           }
-          
           closeDeleteModal();
         }
       } catch (error) {
@@ -147,14 +134,14 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
         <Head title={`Master List - ${systemDisplayName}`} />
         <SidebarProvider>
           <USHERSidebar />
-          <main className="flex-1 w-full h-screen overflow-hidden flex flex-col bg-white dark:bg-gray-900">
-            <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <main className="flex-1 w-full h-screen overflow-hidden flex flex-col">
+            <div className="flex-shrink-0 flex items-center gap-4 p-4 border-b border-gray-200 dark:border-gray-700">
               <SidebarTrigger />
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                 Masterlist - {systemDisplayName}
               </h1>
             </div>
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
               <div className="text-gray-600 dark:text-gray-400">Loading...</div>
             </div>
           </main>
@@ -168,153 +155,162 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
       <Head title={`Master List - ${systemDisplayName}`} />
       <SidebarProvider>
         <USHERSidebar />
-        <main className="flex-1 w-full h-screen overflow-hidden flex flex-col bg-white dark:bg-gray-900">
-          <div className="flex items-center gap-4 p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+        {/* h-screen + overflow-hidden locks the page — nothing can scroll */}
+        <main className="flex-1 w-full h-screen overflow-hidden flex flex-col">
+
+          {/* Fixed header strip */}
+          <div className="flex-shrink-0 flex items-center gap-4 p-4 border-b border-gray-200 dark:border-gray-700">
             <SidebarTrigger />
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
               Masterlist - {systemDisplayName}
             </h1>
           </div>
 
-          <div className="flex-1 overflow-hidden flex flex-col">
-            {/* Content */}
-            <div className="flex-1 overflow-auto p-4 sm:p-6 flex flex-col bg-white dark:bg-gray-900">
-              <div className="w-full flex flex-col">
-                {/* Search and Add Bar */}
-                <div className="flex gap-3 sm:gap-4 mb-6 flex-col sm:flex-row items-stretch sm:items-center">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
-                    <input
-                      type="text"
-                      placeholder="Search Box/Item"
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="w-full pl-12 pr-4 py-2.5 border-2 border-gray-400 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors"
-                    />
-                  </div>
-                  <button
-                    onClick={() => setIsBoxModalOpen(true)}
-                    className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950 whitespace-nowrap"
-                  >
-                    <Plus size={20} />
-                    Add Box
-                  </button>
+          {/* Remaining area — flex column, no overflow */}
+          <div className="flex-1 overflow-hidden flex flex-col p-4 gap-4 bg-gray-50 dark:bg-gray-900">
+
+            {/* Search / Add bar — fixed height */}
+            <div className="flex-shrink-0 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <div className="flex gap-3 flex-col lg:flex-row items-end">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search Box/Item"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
+                <button
+                  onClick={() => setIsBoxModalOpen(true)}
+                  className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950 whitespace-nowrap text-sm"
+                >
+                  <Plus size={18} />
+                  Add Box
+                </button>
+              </div>
+            </div>
 
-                {/* Table - Responsive */}
-                <div className="overflow-x-auto border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 mb-4">
-                  <table className="w-full">
-                    {/* Table Header */}
-                    <thead>
-                      <tr className="border-b border-gray-300 dark:border-gray-600">
-                        <th className="px-4 sm:px-6 py-3 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base whitespace-nowrap">
-                          Box Name
-                        </th>
-                        <th className="px-4 sm:px-6 py-3 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base whitespace-nowrap">
-                          Category Quantity
-                        </th>
-                        <th className="px-4 sm:px-6 py-3 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-sm sm:text-base whitespace-nowrap">
-                          Action
-                        </th>
+            {/* Table card — grows to fill remaining height, no internal scroll */}
+            <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col">
+
+              {/* Table area — overflow hidden, table fills space via filler rows */}
+              <div className="flex-1 overflow-hidden">
+                <table className="w-full table-fixed">
+                  <thead className="bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                    <tr>
+                      <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                        Box Name
+                      </th>
+                      <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                        Category Quantity
+                      </th>
+                      <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {paginatedBoxes.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
+                          No boxes found. Create one to get started!
+                        </td>
                       </tr>
-                    </thead>
-
-                    {/* Table Body */}
-                    <tbody>
-                      {paginatedBoxes.length > 0 ? (
-                        paginatedBoxes.map((box) => (
+                    ) : (
+                      <>
+                        {paginatedBoxes.map((box, index) => (
                           <tr
                             key={box.id}
-                            className="border-b border-gray-300 dark:border-gray-600 last:border-b-0 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                            className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${index < paginatedBoxes.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
                           >
-                            <td className="px-4 sm:px-6 py-3 text-center text-gray-900 dark:text-white font-medium text-sm sm:text-base">
+                            <td className="px-4 py-4 text-center text-gray-900 dark:text-white font-medium text-sm">
                               {box.box_name}
                             </td>
-
-                            <td className="px-4 sm:px-6 py-3 text-center text-sm sm:text-base">
-                              <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold inline-block">
+                            <td className="px-4 py-4 text-center text-sm">
+                              <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold text-xs">
                                 {box.category_quantity}
                               </span>
                             </td>
-
-                            <td className="px-4 sm:px-6 py-3 text-center">
+                            <td className="px-4 py-4 text-center">
                               <div className="flex items-center justify-center gap-2">
                                 <button
-                                  onClick={() => {
-                                    // Updated route to include system parameter
-                                    router.visit(`/inventory/${system}/master-list/box/${box.id}`);
-                                  }}
-                                  className="text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 rounded px-2 sm:px-3 py-1 font-medium flex items-center gap-1 text-xs sm:text-sm transition-colors whitespace-nowrap"
+                                  onClick={() => router.visit(`/inventory/${system}/master-list/box/${box.id}`)}
+                                  className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded font-medium transition-colors text-xs"
                                   title="View"
                                 >
                                   <Eye size={14} />
-                                  <span>View</span>
+                                  View
                                 </button>
-
                                 <button
                                   onClick={() => handleDeleteBox(box.id)}
-                                  className="text-white bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 rounded px-2 sm:px-3 py-1 font-medium flex items-center gap-1 text-xs sm:text-sm transition-colors whitespace-nowrap"
+                                  className="inline-flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white rounded font-medium transition-colors text-xs"
                                   title="Delete"
                                 >
                                   <Trash2 size={14} />
-                                  <span>Delete</span>
+                                  Delete
                                 </button>
                               </div>
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={3} className="px-6 py-8 text-center text-gray-600 dark:text-gray-400">
-                            No boxes found. Create one to get started!
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 0 && (
-                  <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
-                    <button
-                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                      disabled={currentPage === 1}
-                      className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                    >
-                      &lt;
-                    </button>
-
-                    <div className="flex gap-1 sm:gap-2">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`px-2 sm:px-3 py-2 border-2 font-semibold rounded transition-colors text-sm ${
-                            currentPage === page
-                              ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
-                              : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                    </div>
-
-                    <button
-                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                      disabled={currentPage === totalPages}
-                      className="px-3 py-2 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                    >
-                      &gt;
-                    </button>
-                  </div>
-                )}
+                        ))}
+                        {/* Filler rows keep the table height consistent and prevent scroll */}
+                        {Array.from({ length: itemsPerPage - paginatedBoxes.length }).map((_, idx) => (
+                          <tr key={`empty-${idx}`}>
+                            <td className="px-4 py-4 text-sm text-center">&nbsp;</td>
+                            <td className="px-4 py-4 text-sm text-center">&nbsp;</td>
+                            <td className="px-4 py-4 text-sm text-center">&nbsp;</td>
+                          </tr>
+                        ))}
+                      </>
+                    )}
+                  </tbody>
+                </table>
               </div>
+
+              {/* Pagination — pinned to bottom inside the card */}
+              {totalPages > 1 && (
+                <div className="flex-shrink-0 flex items-center justify-center gap-1 py-3 border-t border-gray-200 dark:border-gray-700 flex-wrap">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
+                  >
+                    &lt;
+                  </button>
+
+                  <div className="flex gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-2.5 py-1.5 border-2 font-semibold rounded transition-colors text-xs ${
+                          currentPage === page
+                            ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                            : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
+                  >
+                    &gt;
+                  </button>
+                </div>
+              )}
             </div>
+
           </div>
         </main>
 
@@ -325,21 +321,18 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
           system={system}
           onSuccess={handleBoxAdded}
         />
-        
+
         {/* Delete Confirmation Modal */}
         {isDeleteModalOpen && boxToDelete && (
           <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-lg">
-              {/* Header */}
               <div className="p-6 sm:p-8 border-b-2 border-gray-900 dark:border-gray-100">
                 <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
                   {boxToDelete.box_name}
                 </h2>
               </div>
 
-              {/* Content */}
               <div className="p-6 sm:p-8 space-y-6">
-                {/* Warning Message */}
                 <div className="bg-red-100 dark:bg-red-900/30 border-2 border-red-500 dark:border-red-600 rounded-3xl p-6">
                   <p className="text-red-700 dark:text-red-200 font-bold text-lg">
                     Deleting this box will permanently remove all associated sub-categories, items, and related information.
@@ -349,13 +342,10 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
                   </p>
                 </div>
 
-                {/* Confirmation Instructions */}
                 <div>
                   <p className="text-gray-700 dark:text-gray-300 font-semibold mb-4">
                     To continue, type to confirm
                   </p>
-                  
-                  {/* Input Field */}
                   <input
                     type="text"
                     placeholder="Enter box name to confirm"
@@ -366,7 +356,6 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
                 </div>
               </div>
 
-              {/* Footer */}
               <div className="flex gap-3 justify-center p-6 sm:p-8 border-t-2 border-gray-900 dark:border-gray-100 flex-col sm:flex-row">
                 <button
                   onClick={handleConfirmDelete}
