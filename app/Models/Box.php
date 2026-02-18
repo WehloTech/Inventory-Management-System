@@ -13,11 +13,6 @@ class Box extends Model
         return $this->belongsTo(MainCategory::class);
     }
 
-    public function subcategories()
-    {
-        return $this->hasMany(Subcategory::class);
-    }
-
     public function items()
     {
         return $this->hasManyThrough(Item::class, Subcategory::class);

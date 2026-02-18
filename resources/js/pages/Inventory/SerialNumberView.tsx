@@ -63,7 +63,7 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
         console.log('Fetching data for:', { boxId, subcategoryId });
         
         // Fetch serial items
-        const serialUrl = `http://localhost:8000/api/masterlist/subcategory/${subcategoryId}/serials`;
+        const serialUrl = `/api/masterlist/subcategory/${subcategoryId}/box/${boxId}/serials`;
         console.log('Fetching serials from:', serialUrl);
         
         const serialResponse = await fetch(serialUrl);
@@ -106,7 +106,7 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
         }
         
         // Fetch subcategory info
-        const subcategoryUrl = `http://localhost:8000/api/masterlist/box/${boxId}/subcategories`;
+        const subcategoryUrl = `/api/masterlist/box/${boxId}/subcategories`;
         console.log('Fetching subcategories from:', subcategoryUrl);
         
         const subcategoryResponse = await fetch(subcategoryUrl);
