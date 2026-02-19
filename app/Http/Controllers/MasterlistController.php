@@ -12,32 +12,33 @@ class MasterlistController extends Controller
 {
     /*
     ======================================================
-    1️⃣ GET BOXES BY MAIN CATEGORY
+    GET BOXES BY MAIN CATEGORY
     Columns:
     - BoxName
     - Category Quantity
     - Action(View)
     ======================================================
     */
-    public function getBoxesByCategory($mainCategoryId)
-    {
-        $boxes = Box::where('main_category_id', $mainCategoryId)
-            ->withCount('subcategories')
-            ->get()
-            ->map(function ($box) {
-                return [
-                    'id' => $box->id,
-                    'box_name' => $box->name,
-                    'category_quantity' => $box->subcategories_count
-                ];
-            });
+public function getBoxesByCategory($mainCategoryId)
+{
+    $boxes = Box::where('main_category_id', $mainCategoryId)->get()->map(function ($box) {
+        $categoryQty = Item::where('box_id', $box->id)
+            ->distinct('subcategory_id')
+            ->count('subcategory_id');
 
-        return response()->json($boxes);
-    }
+        return [
+            'id' => $box->id,
+            'box_name' => $box->name,
+            'category_quantity' => $categoryQty
+        ];
+    });
 
-    /*
-    ======================================================
-    2️⃣ GET SUBCATEGORY SUMMARY PER BOX
+    return response()->json($boxes);
+}
+
+/*
+======================================================
+GET SUBCATEGORY SUMMARY PER BOX
     Columns:
     - Subcategory
     - stockin
@@ -47,45 +48,44 @@ class MasterlistController extends Controller
     - current items
     ======================================================
     */
-    public function getBoxSubcategories($boxId)
-    {
-        $subcategories = Subcategory::where('box_id', $boxId)
-            ->with(['items'])
-            ->get()
-            ->map(function ($sub) {
+public function getBoxSubcategories($boxId)
+{
+    $items = Item::where('box_id', $boxId)
+        ->with('subcategory')
+        ->get();
 
-                $stockIn = $sub->items->count();
-                $stockOut = $sub->items->where('status', 'STOCK_OUT')->count();
-                $damage = $sub->items->where('status', 'DAMAGED')->count();
-                $inUse = $sub->items->where('status', 'IN_USE')->count();
-                $current = $sub->items->where('status', 'IN_STOCK')->count();
+    $grouped = $items->groupBy('subcategory_id');
 
-                return [
-                    'subcategory_id' => $sub->id,
-                    'subcategory_name' => $sub->name,
-                    'stockin' => $stockIn,
-                    'stockout' => $stockOut,
-                    'damage' => $damage,
-                    'inuse' => $inUse,
-                    'current_items' => $current
-                ];
-            });
+    $subcategories = $grouped->map(function ($groupItems, $subcategoryId) {
+        $sub = $groupItems->first()->subcategory;
 
-        return response()->json($subcategories);
-    }
+        return [
+            'subcategory_id' => $subcategoryId,
+            'subcategory_name' => $sub->name,
+            'stockin' => $groupItems->count(),
+            'stockout' => $groupItems->where('status', 'STOCK_OUT')->count(),
+            'damage' => $groupItems->where('status', 'DAMAGED')->count(),
+            'inuse' => $groupItems->where('status', 'IN_USE')->count(),
+            'current_items' => $groupItems->where('status', 'IN_STOCK')->count(),
+        ];
+    })->values();
+
+    return response()->json($subcategories);
+}
 
     /*
     ======================================================
-    3️⃣ GET SERIALS PER SUBCATEGORY
+    GET SERIALS PER SUBCATEGORY
     Columns:
     - serial
     - supplier
     - status
     ======================================================
     */
-    public function getSubcategorySerials($subcategoryId)
+    public function getSubcategorySerials($subcategoryId, $boxId)
     {
         $items = Item::where('subcategory_id', $subcategoryId)
+            ->where('box_id', $boxId)
             ->with('supplier')
             ->get()
             ->map(function ($item) {
@@ -98,4 +98,73 @@ class MasterlistController extends Controller
 
         return response()->json($items);
     }
+
+        /*
+    ======================================================
+    ADD BOX
+    Body:
+    - name
+    - main_category_id
+    ======================================================
+    */
+    public function addBox(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'main_category_id' => 'required|exists:main_categories,id'
+        ]);
+
+        // Check if box with same name already exists in this category
+        $exists = Box::where('name', $request->name)
+                    ->where('main_category_id', $request->main_category_id)
+                    ->exists();
+        
+        if ($exists) {
+            return response()->json([
+                'message' => 'Box ID already has been taken'
+            ], 422); // 422 Unprocessable Entity
+        }
+
+        $box = Box::create([
+            'name' => $request->name,
+            'main_category_id' => $request->main_category_id
+        ]);
+
+        return response()->json([
+            'message' => 'Box created successfully',
+            'data' => $box
+        ], 201);
+    }
+   /*
+    ======================================================
+    DELETE BOX
+    Deletes a box and all associated subcategories and items
+    ======================================================
+    */
+    public function deleteBox($boxId)
+    {
+        try {
+            $box = Box::findOrFail($boxId);
+            
+            // Just delete the box - cascade will handle the rest!
+            $box->delete();
+
+            return response()->json([
+                'message' => 'Box deleted successfully'
+            ], 200);
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Box not found'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete box',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+ 
 }

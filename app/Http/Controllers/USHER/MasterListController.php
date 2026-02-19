@@ -8,35 +8,69 @@ use Inertia\Inertia;
 class MasterListController extends Controller
 {
     /**
-     * Show the master list view
-     * Displays all inventory boxes
+     * Map system names to main category IDs
      */
-    public function index()
+    private function getCategoryId($system)
     {
-        return Inertia::render('USHER/MasterList');
+        $categoryMap = [
+            'usher' => 1,
+            'usherette' => 2,
+            'wehlo' => 3,
+            'hoclomac' => 4,
+            'all' => 5,
+        ];
+        
+        return $categoryMap[$system] ?? 1;
+    }
+
+    /**
+     * Show the master list view
+     * Displays all inventory boxes for a specific system
+     * 
+     * @param string $system The system name (usher, usherette, etc.)
+     */
+    public function index($system)
+    {
+        $mainCategoryId = $this->getCategoryId($system);
+        
+        return Inertia::render('Inventory/MasterList', [
+            'mainCategoryId' => $mainCategoryId,
+            'system' => $system,
+        ]);
     }
 
     /**
      * Show the action view for a specific box
      * Displays all subcategories and items for the selected box
      * 
+     * @param string $system The system name
      * @param int $boxId The ID of the box to display
      */
-    public function show($boxId)
+    public function show($system, $boxId)
     {
-        // For now, we'll pass the boxId and let the frontend component handle the data
-        // TODO: Fetch the box with its subcategories and serial items from database
-        // Example:
-        // $box = InventoryBox::with('subcategories.serialItems')->findOrFail($boxId);
+        $mainCategoryId = $this->getCategoryId($system);
         
-        return Inertia::render('USHER/ActionViewU', [
+        return Inertia::render('Inventory/ActionViewU', [
+            'mainCategoryId' => $mainCategoryId,
+            'system' => $system,
             'boxId' => (int) $boxId,
         ]);
     }
 
-    public function showSerials($boxId, $subcategoryId)
+    /**
+     * Show serial numbers for a specific subcategory
+     * 
+     * @param string $system The system name
+     * @param int $boxId The ID of the box
+     * @param int $subcategoryId The ID of the subcategory
+     */
+    public function showSerials($system, $boxId, $subcategoryId)
     {
-        return Inertia::render('USHER/SerialNumberView', [
+        $mainCategoryId = $this->getCategoryId($system);
+        
+        return Inertia::render('Inventory/SerialNumberView', [
+            'mainCategoryId' => $mainCategoryId,
+            'system' => $system,
             'boxId' => (int) $boxId,
             'subcategoryId' => (int) $subcategoryId,
         ]);
