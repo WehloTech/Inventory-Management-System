@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { Search, ArrowLeft, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Search, Plus, Trash2, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import { AddStockInModal } from '@/components/modals/AddStockInModal';
 import { MoveModal } from '@/components/modals/MoveModal';
 
@@ -14,13 +14,13 @@ interface SupplierInfo {
 }
 
 interface StockInSerialGroup {
-  serialNumbers: string[]; // plain strings when submitting
+  serialNumbers: string[];
   supplierId: string;
   supplierName: string;
 }
 
 interface SerialNumberGroup {
-  serialNumbers: { serial: string; boxName: string }[]; // was string[]
+  serialNumbers: { serial: string; boxName: string }[];
   supplierId: string;
   supplierName: string;
 }
@@ -31,7 +31,7 @@ interface StockInItem {
   boxName: string;
   itemName: string;
   quantity: number;
-  serialGroups: StockInSerialGroup[]; // use separate interface here
+  serialGroups: StockInSerialGroup[];
   remarks: string;
 }
 
@@ -50,7 +50,7 @@ interface StockInProps {
   system: string;
 }
 
-// Confirmation Dialog
+// Confirmation Dialog (unchanged from first code)
 const ConfirmDialog: React.FC<{
   isOpen: boolean;
   title: string;
@@ -77,7 +77,6 @@ const ConfirmDialog: React.FC<{
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{message}</p>
           </div>
         </div>
-
         <div className="p-6 flex gap-3">
           <button
             onClick={onCancel}
@@ -88,9 +87,7 @@ const ConfirmDialog: React.FC<{
           <button
             onClick={onConfirm}
             className={`flex-1 px-4 py-2 text-white rounded-full font-medium ${
-              isDangerous
-                ? 'bg-red-600 hover:bg-red-700'
-                : 'bg-blue-600 hover:bg-blue-700'
+              isDangerous ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
             {confirmText}
@@ -101,7 +98,7 @@ const ConfirmDialog: React.FC<{
   );
 };
 
-// Serial Number View Modal
+// Serial Number View Modal — design from second code, data shape from first code
 const SerialNumberViewModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -121,11 +118,12 @@ const SerialNumberViewModal: React.FC<{
 
   if (!isOpen || !entry) return null;
 
+  // First code data shape: serialNumbers is { serial, boxName }[]
   const allSerials = entry.serialGroups.flatMap((group) =>
-    group.serialNumbers.map((item) => ({ 
-      serial: item.serial, 
+    group.serialNumbers.map((item) => ({
+      serial: item.serial,
       boxName: item.boxName,
-      supplier: group.supplierName 
+      supplier: group.supplierName,
     }))
   );
 
@@ -143,18 +141,18 @@ const SerialNumberViewModal: React.FC<{
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 gap-2 flex-wrap">
+        <div className="flex items-center justify-between p-6 border-b-2 border-gray-300 dark:border-gray-700 flex-shrink-0 gap-2 flex-wrap">
           <button
             onClick={onClose}
-            className="flex items-center gap-2 text-white font-bold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full transition whitespace-nowrap text-sm sm:text-base"
+            className="flex items-center gap-2 text-white font-bold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full transition whitespace-nowrap text-sm"
           >
             <ArrowLeft size={20} />
             Back
           </button>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white text-center flex-1 sm:flex-none">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white text-center flex-1">
             Serial #
           </h2>
-          <div className="w-20 sm:w-28" />
+          <div className="w-20" />
         </div>
 
         {/* Content */}
@@ -199,7 +197,7 @@ const SerialNumberViewModal: React.FC<{
                   <tr>
                     <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">#</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Serial #</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Box</th> 
+                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Box</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Supplier</th>
                   </tr>
                 </thead>
@@ -211,9 +209,7 @@ const SerialNumberViewModal: React.FC<{
                       </td>
                       <td className="px-3 sm:px-6 py-3 text-sm text-gray-900 dark:text-white font-medium">{item.serial}</td>
                       <td className="px-3 sm:px-6 py-3 text-sm text-gray-900 dark:text-white">
-                        <span className="text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-full">
-                          {item.boxName}
-                        </span>
+                        <span className="text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-full">{item.boxName}</span>
                       </td>
                       <td className="px-3 sm:px-6 py-3 text-sm text-gray-900 dark:text-white">{item.supplier}</td>
                     </tr>
@@ -279,11 +275,36 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
   const [deleteConfirm, setDeleteConfirm] = useState<StockInDashboardEntry | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const ITEMS_PER_PAGE = 8;
+  // Sorting states (from second code design)
+  const [sortDate, setSortDate] = useState<'none' | 'asc' | 'desc'>('none');
+  const [sortItem, setSortItem] = useState<'none' | 'asc' | 'desc'>('none');
+  const [sortQuantity, setSortQuantity] = useState<'none' | 'asc' | 'desc'>('none');
 
+  const handleSortDate = () => {
+    setSortDate(prev => prev === 'none' ? 'asc' : prev === 'asc' ? 'desc' : 'none');
+    setSortItem('none');
+    setSortQuantity('none');
+    setCurrentPage(1);
+  };
+
+  const handleSortItem = () => {
+    setSortItem(prev => prev === 'none' ? 'asc' : prev === 'asc' ? 'desc' : 'none');
+    setSortDate('none');
+    setSortQuantity('none');
+    setCurrentPage(1);
+  };
+
+  const handleSortQuantity = () => {
+    setSortQuantity(prev => prev === 'none' ? 'asc' : prev === 'asc' ? 'desc' : 'none');
+    setSortDate('none');
+    setSortItem('none');
+    setCurrentPage(1);
+  };
+
+  const ITEMS_PER_PAGE = 8;
   const systemDisplayName = system.toUpperCase();
 
-  // Fetch dashboard data on mount
+  // Fetch dashboard data on mount (original API logic)
   useEffect(() => {
     fetchDashboardData();
   }, [mainCategoryId]);
@@ -310,7 +331,6 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
       });
 
       if (response.ok) {
-        // Refresh dashboard data
         await fetchDashboardData();
         setIsModalOpen(false);
       } else {
@@ -327,7 +347,6 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
     if (!selectedItem) return;
 
     try {
-      // Map location to status
       const statusMap: Record<string, string> = {
         'In use': 'IN_USE',
         'Stock out': 'STOCK_OUT',
@@ -345,7 +364,7 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
       });
 
       if (response.ok) {
-        await fetchDashboardData(); // Refresh dashboard
+        await fetchDashboardData();
         setSerialModalOpen(false);
       } else {
         const error = await response.json();
@@ -358,7 +377,7 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
   };
 
   const handleMoveSuccess = () => {
-    fetchDashboardData(); // Refresh dashboard after move from Move modal
+    fetchDashboardData();
   };
 
   const handleUpdateRemarks = async (remarks: string) => {
@@ -366,18 +385,14 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
 
     try {
       const allSerials = selectedItem.serialGroups.flatMap(g => g.serialNumbers.map(s => s.serial));
-      
+
       const response = await fetch('/api/stockin/update-remarks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serialNumbers: allSerials,
-          remarks,
-        }),
+        body: JSON.stringify({ serialNumbers: allSerials, remarks }),
       });
 
       if (response.ok) {
-        // Update local state
         setDashboardEntries((prev) =>
           prev.map((entry) =>
             entry.id === selectedItem.id ? { ...entry, remarks } : entry
@@ -398,23 +413,18 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
     if (!deleteConfirm) return;
 
     try {
-      // Get all serial numbers from this entry
       const allSerials = deleteConfirm.serialGroups.flatMap(g => g.serialNumbers.map(s => s.serial));
 
       const response = await fetch('/api/stockin/entry', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serialNumbers: allSerials,
-        }),
+        body: JSON.stringify({ serialNumbers: allSerials }),
       });
 
       if (response.ok) {
-        // Refresh dashboard data from server
         await fetchDashboardData();
         setDeleteConfirm(null);
-        
-        // Adjust current page if needed
+
         const newFilteredCount = dashboardEntries.length - 1;
         const newTotalPages = Math.ceil(newFilteredCount / ITEMS_PER_PAGE);
         if (currentPage > newTotalPages && newTotalPages > 0) {
@@ -430,22 +440,43 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
     }
   };
 
-const filteredEntries = useMemo(() => {
-  return dashboardEntries.filter((entry) => {
-    const matchesSearch =
-      entry.itemName.toLowerCase().includes(searchQuery.toLowerCase());
-      // removed entry.boxName search — it's empty now
+  const filteredEntries = useMemo(() => {
+    let filtered = dashboardEntries.filter((entry) => {
+      const matchesSearch = entry.itemName.toLowerCase().includes(searchQuery.toLowerCase());
 
-    let matchesDate = true;
-    if (filterType === 'single' && dateFilter) {
-      matchesDate = entry.date === dateFilter;
-    } else if (filterType === 'range' && startDate && endDate) {
-      matchesDate = entry.date >= startDate && entry.date <= endDate;
+      let matchesDate = true;
+      if (filterType === 'single' && dateFilter) {
+        matchesDate = entry.date === dateFilter;
+      } else if (filterType === 'range' && startDate && endDate) {
+        matchesDate = entry.date >= startDate && entry.date <= endDate;
+      }
+
+      return matchesSearch && matchesDate;
+    });
+
+    // Apply sorting
+    if (sortDate !== 'none') {
+      filtered = [...filtered].sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return sortDate === 'asc' ? dateA - dateB : dateB - dateA;
+      });
+    } else if (sortItem !== 'none') {
+      filtered = [...filtered].sort((a, b) =>
+        sortItem === 'asc'
+          ? a.itemName.localeCompare(b.itemName)
+          : b.itemName.localeCompare(a.itemName)
+      );
+    } else if (sortQuantity !== 'none') {
+      filtered = [...filtered].sort((a, b) =>
+        sortQuantity === 'asc'
+          ? a.totalQuantity - b.totalQuantity
+          : b.totalQuantity - a.totalQuantity
+      );
     }
 
-    return matchesSearch && matchesDate;
-  });
-}, [dashboardEntries, searchQuery, dateFilter, filterType, startDate, endDate]);
+    return filtered;
+  }, [dashboardEntries, searchQuery, dateFilter, filterType, startDate, endDate, sortDate, sortItem, sortQuantity]);
 
   const totalPages = Math.ceil(filteredEntries.length / ITEMS_PER_PAGE);
   const paginatedEntries = filteredEntries.slice(
@@ -459,12 +490,12 @@ const filteredEntries = useMemo(() => {
         <Head title={`Stock In - ${systemDisplayName}`} />
         <SidebarProvider>
           <USHERSidebar system={system} />
-          <main className="flex-1 w-full overflow-hidden flex flex-col">
-            <div className="flex items-center gap-4 p-4 border-b border-gray-200 dark:border-gray-700">
+          <main className="flex-1 w-full h-screen overflow-hidden flex flex-col">
+            <div className="flex-shrink-0 flex items-center gap-4 p-4 border-b border-gray-200 dark:border-gray-700">
               <SidebarTrigger />
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">STOCK IN - {systemDisplayName}</h1>
             </div>
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
               <div className="text-gray-600 dark:text-gray-400">Loading...</div>
             </div>
           </main>
@@ -478,15 +509,20 @@ const filteredEntries = useMemo(() => {
       <Head title={`Stock In - ${systemDisplayName}`} />
       <SidebarProvider>
         <USHERSidebar system={system} />
-        <main className="flex-1 w-full overflow-hidden flex flex-col">
-          <div className="flex items-center gap-4 p-4 border-b border-gray-200 dark:border-gray-700">
+        {/* h-screen + overflow-hidden locks the page — nothing can scroll */}
+        <main className="flex-1 w-full h-screen overflow-hidden flex flex-col">
+
+          {/* Fixed header */}
+          <div className="flex-shrink-0 flex items-center gap-4 p-4 border-b border-gray-200 dark:border-gray-700">
             <SidebarTrigger />
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">STOCK IN - {systemDisplayName}</h1>
           </div>
 
-          <div className="flex-1 overflow-hidden p-4 flex flex-col bg-gray-50 dark:bg-gray-900">
-            {/* Search and Filter Bar */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 border border-gray-200 dark:border-gray-700 space-y-3">
+          {/* Remaining area — single flex column, no overflow */}
+          <div className="flex-1 overflow-hidden flex flex-col p-4 gap-4 bg-gray-50 dark:bg-gray-900">
+
+            {/* Search and Filter Bar — fixed height */}
+            <div className="flex-shrink-0 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 space-y-3">
               <div className="flex gap-3 flex-col lg:flex-row items-end">
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-3 text-gray-400" size={18} />
@@ -503,8 +539,9 @@ const filteredEntries = useMemo(() => {
                 </div>
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium text-sm whitespace-nowrap"
+                  className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950 whitespace-nowrap text-sm"
                 >
+                  <Plus size={18} />
                   Add Stock In
                 </button>
                 <button
@@ -517,42 +554,15 @@ const filteredEntries = useMemo(() => {
 
               <div className="flex gap-3 items-center flex-wrap">
                 <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    value="all"
-                    checked={filterType === 'all'}
-                    onChange={(e) => {
-                      setFilterType(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="w-4 h-4"
-                  />
+                  <input type="radio" value="all" checked={filterType === 'all'} onChange={(e) => { setFilterType(e.target.value); setCurrentPage(1); }} className="w-4 h-4" />
                   <span className="text-gray-700 dark:text-gray-300">All</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    value="single"
-                    checked={filterType === 'single'}
-                    onChange={(e) => {
-                      setFilterType(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="w-4 h-4"
-                  />
+                  <input type="radio" value="single" checked={filterType === 'single'} onChange={(e) => { setFilterType(e.target.value); setCurrentPage(1); }} className="w-4 h-4" />
                   <span className="text-gray-700 dark:text-gray-300">Single Date</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    value="range"
-                    checked={filterType === 'range'}
-                    onChange={(e) => {
-                      setFilterType(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="w-4 h-4"
-                  />
+                  <input type="radio" value="range" checked={filterType === 'range'} onChange={(e) => { setFilterType(e.target.value); setCurrentPage(1); }} className="w-4 h-4" />
                   <span className="text-gray-700 dark:text-gray-300">Date Range</span>
                 </label>
 
@@ -561,144 +571,154 @@ const filteredEntries = useMemo(() => {
                     <input
                       type="date"
                       value={dateFilter}
-                      onChange={(e) => {
-                        setDateFilter(e.target.value);
-                        setCurrentPage(1);
-                      }}
+                      onChange={(e) => { setDateFilter(e.target.value); setCurrentPage(1); }}
                       className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     />
-                    <button
-                      onClick={() => {
-                        setDateFilter('');
-                        setCurrentPage(1);
-                      }}
-                      className="px-3 py-1 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm"
-                    >
-                      Clear
-                    </button>
+                    <button onClick={() => { setDateFilter(''); setCurrentPage(1); }} className="px-3 py-1 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm">Clear</button>
                   </div>
                 )}
 
                 {filterType === 'range' && (
                   <div className="flex gap-2 items-center ml-auto flex-wrap">
-                    <span className="text-gray-600 dark:text-gray-400 rounded text-sm">From:</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">From:</span>
                     <input
                       type="date"
                       value={startDate}
-                      onChange={(e) => {
-                        setStartDate(e.target.value);
-                        setCurrentPage(1);
-                      }}
+                      onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
                       className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     />
-                    <span className="text-gray-600 dark:text-gray-400 rounded text-sm">To:</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">To:</span>
                     <input
                       type="date"
                       value={endDate}
-                      onChange={(e) => {
-                        setEndDate(e.target.value);
-                        setCurrentPage(1);
-                      }}
+                      onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
                       className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     />
-                    <button
-                      onClick={() => {
-                        setStartDate('');
-                        setEndDate('');
-                        setCurrentPage(1);
-                      }}
-                      className="px-3 py-1 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm"
-                    >
-                      Clear
-                    </button>
+                    <button onClick={() => { setStartDate(''); setEndDate(''); setCurrentPage(1); }} className="px-3 py-1 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm">Clear</button>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Table */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex-1 flex flex-col">
-              <div className="overflow-x-auto flex-1">
-                <table className="w-full min-w-max">
-                  <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 sticky top-0">
+            {/* Table card — fills remaining height, no internal scroll */}
+            <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col">
+
+              {/* Table area */}
+              <div className="flex-1 overflow-hidden">
+                <table className="w-full table-fixed">
+                  <thead className="bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                     <tr>
-                      <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Date</th>
-                      <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Item</th>
-                      <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Qty</th>
-                      <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase hidden sm:table-cell">Remarks</th>
-                      <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">S/N</th>
-                      <th className="px-2 sm:px-4 md:px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Act</th>
+                      <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                        <button onClick={handleSortDate} className="flex items-center justify-center gap-1 w-full hover:text-gray-900 dark:hover:text-white transition-colors text-xs font-bold uppercase">
+                          Date <span>{sortDate === 'none' ? '↕' : sortDate === 'asc' ? '↑' : '↓'}</span>
+                        </button>
+                      </th>
+                      <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                        <button onClick={handleSortItem} className="flex items-center justify-center gap-1 w-full hover:text-gray-900 dark:hover:text-white transition-colors text-xs font-bold uppercase">
+                          Item Name <span>{sortItem === 'none' ? '↕' : sortItem === 'asc' ? '↑' : '↓'}</span>
+                        </button>
+                      </th>
+                      <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                        <button onClick={handleSortQuantity} className="flex items-center justify-center gap-1 w-full hover:text-gray-900 dark:hover:text-white transition-colors text-xs font-bold uppercase">
+                          Quantity <span>{sortQuantity === 'none' ? '↕' : sortQuantity === 'asc' ? '↑' : '↓'}</span>
+                        </button>
+                      </th>
+                      <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">Remarks</th>
+                      <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">Serial #</th>
+                      <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+
+                  <tbody>
                     {paginatedEntries.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 sm:px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan={6} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
                           No stock in entries found
                         </td>
                       </tr>
                     ) : (
-                      paginatedEntries.map((entry) => (
-                        <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                          <td className="px-2 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-gray-900 dark:text-white font-medium whitespace-nowrap">
-                            {new Date(entry.date).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </td>
-                          <td className="px-2 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-gray-900 dark:text-white font-medium truncate">{entry.itemName}</td>
-                          <td className="px-2 sm:px-4 md:px-6 py-3 text-xs sm:text-sm">
-                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold text-xs">
-                              {entry.totalQuantity}
-                            </span>
-                          </td>
-                          <td className="px-2 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-gray-600 dark:text-gray-400 hidden sm:table-cell truncate">{entry.remarks || '-'}</td>
-                          <td className="px-2 sm:px-4 md:px-6 py-3 text-xs sm:text-sm">
-                            <button
-                              onClick={() => {
-                                setSelectedItem(entry);
-                                setSerialModalOpen(true);
-                              }}
-                              className="text-blue-600 dark:text-blue-400 hover:underline font-medium whitespace-nowrap"
-                            >
-                              View
-                            </button>
-                          </td>
-                          <td className="px-2 sm:px-4 md:px-6 py-3 text-xs">
-                            <button
-                              onClick={() => handleDeleteEntry(entry)}
-                              className="text-white bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 rounded px-1 sm:px-2 py-1 font-medium flex items-center gap-1 text-xs transition-colors whitespace-nowrap"
-                            >
-                              <Trash2 size={12} />
-                              <span className="hidden sm:inline">Del</span>
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                      <>
+                        {paginatedEntries.map((entry, index) => (
+                          <tr
+                            key={entry.id}
+                            className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${index < paginatedEntries.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
+                          >
+                            <td className="px-4 py-3.5 text-sm text-gray-900 dark:text-white font-medium text-center">
+                              {new Date(entry.date).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </td>
+                            <td className="px-4 py-3.5 text-sm text-gray-900 dark:text-white font-medium text-center">{entry.itemName}</td>
+                            <td className="px-4 py-3.5 text-sm text-center">
+                              <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold text-xs">
+                                {entry.totalQuantity}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 text-sm text-gray-600 dark:text-gray-400 text-center">{entry.remarks || '-'}</td>
+                            <td className="px-4 py-3.5 text-sm text-center">
+                              <button
+                                onClick={() => {
+                                  setSelectedItem(entry);
+                                  setSerialModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded font-medium transition-colors text-xs"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                                  <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                View
+                              </button>
+                            </td>
+                            <td className="px-4 py-3.5 text-sm text-center">
+                              <button
+                                onClick={() => handleDeleteEntry(entry)}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white rounded font-medium transition-colors text-xs"
+                              >
+                                <Trash2 size={12} />
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {/* Filler rows keep table height consistent */}
+                        {Array.from({ length: ITEMS_PER_PAGE - paginatedEntries.length }).map((_, idx) => (
+                          <tr key={`empty-${idx}`}>
+                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
+                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
+                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
+                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
+                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
+                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
+                          </tr>
+                        ))}
+                      </>
                     )}
                   </tbody>
                 </table>
               </div>
 
-              {/* Pagination */}
+              {/* Pagination — pinned to bottom inside the card */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex-wrap">
+                <div className="flex-shrink-0 flex items-center justify-center gap-1 py-3 border-t border-gray-200 dark:border-gray-700 flex-wrap">
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 transition"
+                    className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
                   >
-                    <ChevronLeft size={18} />
+                    &lt;
                   </button>
-                  <div className="flex gap-1 sm:gap-2 flex-wrap justify-center">
+                  <div className="flex gap-1">
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`px-2 sm:px-3 py-2 border-2 font-semibold rounded transition-colors text-sm ${
+                        className={`px-2.5 py-1.5 border-2 font-semibold rounded transition-colors text-xs ${
                           currentPage === page
                             ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
-                            : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600'
+                            : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
                         }`}
                       >
                         {page}
@@ -708,17 +728,18 @@ const filteredEntries = useMemo(() => {
                   <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 transition"
+                    className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
                   >
-                    <ChevronRight size={18} />
+                    &gt;
                   </button>
                 </div>
               )}
             </div>
+
           </div>
         </main>
 
-        {/* Add Stock In Modal */}
+        {/* Add Stock In Modal (original component) */}
         <AddStockInModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
@@ -734,13 +755,13 @@ const filteredEntries = useMemo(() => {
           onUpdateRemarks={handleUpdateRemarks}
         />
 
-        {/* Move Modal */}
+        {/* Move Modal (original component) */}
         <MoveModal
           isOpen={isMoveModalOpen}
           onClose={() => setIsMoveModalOpen(false)}
           mainCategoryId={mainCategoryId}
           onMoveSuccess={handleMoveSuccess}
-          currentStatus="IN_STOCK" // Only show IN_STOCK items
+          currentStatus="IN_STOCK"
         />
 
         {/* Delete Confirmation */}
