@@ -235,6 +235,7 @@ class StockInController extends Controller
                         'serialNumbers' => $supplierLogs->map(fn($log) => [
                             'serial' => $log->item->serial_number,
                             'boxName' => $log->item->box->name,
+                            'batchTime'  => $log->created_at->toIso8601String(),
                         ])->toArray(),
                         'supplierId' => (string) $supplierId,
                         'supplierName' => $supplier ? $supplier->name : 'Unknown',
@@ -497,6 +498,7 @@ class StockInController extends Controller
                         'serialNumbers' => $supplierLogs->map(fn($log) => [
                             'serial' => $log->item->serial_number,
                             'boxName' => $log->item->box->name,
+                            'batchTime' => $log->created_at->toIso8601String(),
                         ])->toArray(),
                         'supplierId' => (string) $supplierId,
                         'supplierName' => $supplier ? $supplier->name : 'Unknown',

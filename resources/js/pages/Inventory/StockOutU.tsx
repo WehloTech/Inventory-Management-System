@@ -6,7 +6,7 @@ import { Search, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import { MoveModal } from '@/components/modals/MoveModal';
 
 interface SerialNumberGroup {
-  serialNumbers: { serial: string; boxName: string }[];
+  serialNumbers: { serial: string; boxName: string; batchTime: string }[];
   supplierId: string;
   supplierName: string;
 }
@@ -74,7 +74,6 @@ const ConfirmDialog: React.FC<{
   );
 };
 
-// Serial Number View Modal — same as StockIn but with checkbox + Move button (stock out has move-from-view)
 const SerialNumberViewModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -98,6 +97,7 @@ const SerialNumberViewModal: React.FC<{
     group.serialNumbers.map((item) => ({
       serial: item.serial,
       boxName: item.boxName,
+      batchTime: item.batchTime,
       supplier: group.supplierName,
     }))
   );
@@ -111,7 +111,7 @@ const SerialNumberViewModal: React.FC<{
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header — no MOVE button */}
+        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b-2 border-gray-300 dark:border-gray-700 flex-shrink-0 gap-2 flex-wrap">
           <button
             onClick={onClose}
@@ -169,6 +169,7 @@ const SerialNumberViewModal: React.FC<{
                     <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">#</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Serial #</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Box</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Time</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Supplier</th>
                   </tr>
                 </thead>
@@ -185,12 +186,22 @@ const SerialNumberViewModal: React.FC<{
                       <td className="px-3 sm:px-6 py-3 text-sm text-gray-900 dark:text-white">
                         <span className="text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-full">{item.boxName}</span>
                       </td>
+                      <td className="px-3 sm:px-6 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        {item.batchTime
+                          ? new Date(item.batchTime).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true,
+                            })
+                          : '-'}
+                      </td>
                       <td className="px-3 sm:px-6 py-3 text-sm text-gray-900 dark:text-white">{item.supplier}</td>
                     </tr>
                   ))}
                   {/* Filler rows — keep modal height consistent */}
                   {Array.from({ length: ITEMS_PER_PAGE - paginatedSerials.length }).map((_, idx) => (
                     <tr key={`empty-${idx}`}>
+                      <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
                       <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
                       <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
                       <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
@@ -256,7 +267,6 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  // Sorting states
   const [sortDate, setSortDate] = useState<'none' | 'asc' | 'desc'>('none');
   const [sortItem, setSortItem] = useState<'none' | 'asc' | 'desc'>('none');
   const [sortQuantity, setSortQuantity] = useState<'none' | 'asc' | 'desc'>('none');
@@ -285,7 +295,6 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
   const ITEMS_PER_PAGE = 8;
   const systemDisplayName = system.toUpperCase();
 
-  // Fetch stock out dashboard data — calls same controller, status STOCK_OUT
   useEffect(() => {
     fetchDashboardData();
   }, [mainCategoryId]);
@@ -300,34 +309,6 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
       console.error('Error fetching stock out dashboard data:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Move from the serial view modal — calls the same /api/stockin/move endpoint
-  const handleMoveFromViewModal = async (selectedSerials: string[]) => {
-    if (!selectedItem) return;
-
-    try {
-      const response = await fetch('/api/stockin/move', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serialNumbers: selectedSerials,
-          status: 'IN_STOCK', // moving stock out items back — adjust as needed
-          remarks: null,
-        }),
-      });
-
-      if (response.ok) {
-        await fetchDashboardData();
-        setSerialModalOpen(false);
-      } else {
-        const error = await response.json();
-        alert(error.message || 'Failed to move items');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to move items');
     }
   };
 
@@ -374,7 +355,6 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
       return matchesSearch && matchesDate;
     });
 
-    // Apply sorting
     if (sortDate !== 'none') {
       filtered = [...filtered].sort((a, b) => {
         const dateA = new Date(a.date).getTime();
@@ -429,7 +409,6 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
       <Head title={`Stock Out - ${systemDisplayName}`} />
       <SidebarProvider>
         <USHERSidebar system={system} />
-        {/* h-screen + overflow-hidden locks the page */}
         <main className="flex-1 w-full h-screen overflow-hidden flex flex-col">
 
           {/* Fixed header */}
@@ -438,7 +417,6 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">STOCK OUT - {systemDisplayName}</h1>
           </div>
 
-          {/* Remaining area */}
           <div className="flex-1 overflow-hidden flex flex-col p-4 gap-4 bg-gray-50 dark:bg-gray-900">
 
             {/* Search and Filter Bar */}
@@ -457,7 +435,6 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 text-sm"
                   />
                 </div>
-                {/* No Add Stock Out button — only Move */}
                 <button
                   onClick={() => setIsMoveModalOpen(true)}
                   className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full font-medium text-sm whitespace-nowrap"
@@ -516,8 +493,6 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
 
             {/* Table card */}
             <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col">
-
-              {/* Table area */}
               <div className="flex-1 overflow-hidden">
                 <table className="w-full table-fixed">
                   <thead className="bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
@@ -587,7 +562,6 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
                             </td>
                           </tr>
                         ))}
-                        {/* Filler rows keep table height consistent */}
                         {Array.from({ length: ITEMS_PER_PAGE - paginatedEntries.length }).map((_, idx) => (
                           <tr key={`empty-${idx}`}>
                             <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
@@ -642,7 +616,6 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
           </div>
         </main>
 
-        {/* Serial Number View Modal */}
         <SerialNumberViewModal
           isOpen={serialModalOpen}
           onClose={() => setSerialModalOpen(false)}
@@ -650,7 +623,6 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
           onUpdateRemarks={handleUpdateRemarks}
         />
 
-        {/* Move Modal — imported component, passes STOCK_OUT as currentStatus */}
         <MoveModal
           isOpen={isMoveModalOpen}
           onClose={() => setIsMoveModalOpen(false)}

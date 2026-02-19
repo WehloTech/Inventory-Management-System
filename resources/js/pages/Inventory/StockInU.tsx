@@ -20,7 +20,7 @@ interface StockInSerialGroup {
 }
 
 interface SerialNumberGroup {
-  serialNumbers: { serial: string; boxName: string }[];
+  serialNumbers: { serial: string; boxName: string; batchTime: string }[];
   supplierId: string;
   supplierName: string;
 }
@@ -50,7 +50,6 @@ interface StockInProps {
   system: string;
 }
 
-// Confirmation Dialog (unchanged from first code)
 const ConfirmDialog: React.FC<{
   isOpen: boolean;
   title: string;
@@ -98,7 +97,6 @@ const ConfirmDialog: React.FC<{
   );
 };
 
-// Serial Number View Modal — design from second code, data shape from first code
 const SerialNumberViewModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -118,11 +116,11 @@ const SerialNumberViewModal: React.FC<{
 
   if (!isOpen || !entry) return null;
 
-  // First code data shape: serialNumbers is { serial, boxName }[]
   const allSerials = entry.serialGroups.flatMap((group) =>
     group.serialNumbers.map((item) => ({
       serial: item.serial,
       boxName: item.boxName,
+      batchTime: item.batchTime,
       supplier: group.supplierName,
     }))
   );
@@ -132,10 +130,6 @@ const SerialNumberViewModal: React.FC<{
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
-
-  const handleSaveRemarks = () => {
-    onUpdateRemarks(remarks);
-  };
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
@@ -181,7 +175,7 @@ const SerialNumberViewModal: React.FC<{
                 className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
               />
               <button
-                onClick={handleSaveRemarks}
+                onClick={() => onUpdateRemarks(remarks)}
                 className="mt-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition"
               >
                 Save
@@ -198,12 +192,18 @@ const SerialNumberViewModal: React.FC<{
                     <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">#</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Serial #</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Box</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Time</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Supplier</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedSerials.map((item, idx) => (
-                    <tr key={`${entry.id}-${item.serial}-${idx}`} className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${idx < paginatedSerials.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}>
+                    <tr
+                      key={`${entry.id}-${item.serial}-${idx}`}
+                      className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                        idx < paginatedSerials.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''
+                      }`}
+                    >
                       <td className="px-3 sm:px-6 py-3 text-sm text-gray-500 dark:text-gray-400">
                         {(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}
                       </td>
@@ -211,12 +211,22 @@ const SerialNumberViewModal: React.FC<{
                       <td className="px-3 sm:px-6 py-3 text-sm text-gray-900 dark:text-white">
                         <span className="text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-full">{item.boxName}</span>
                       </td>
+                      <td className="px-3 sm:px-6 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        {item.batchTime
+                          ? new Date(item.batchTime).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true,
+                            })
+                          : '-'}
+                      </td>
                       <td className="px-3 sm:px-6 py-3 text-sm text-gray-900 dark:text-white">{item.supplier}</td>
                     </tr>
                   ))}
-                  {/* Filler rows — keep modal height consistent across pages */}
+                  {/* Filler rows — keep modal height consistent */}
                   {Array.from({ length: ITEMS_PER_PAGE - paginatedSerials.length }).map((_, idx) => (
                     <tr key={`empty-${idx}`}>
+                      <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
                       <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
                       <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
                       <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
@@ -284,7 +294,6 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
   const [deleteConfirm, setDeleteConfirm] = useState<StockInDashboardEntry | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Sorting states (from second code design)
   const [sortDate, setSortDate] = useState<'none' | 'asc' | 'desc'>('none');
   const [sortItem, setSortItem] = useState<'none' | 'asc' | 'desc'>('none');
   const [sortQuantity, setSortQuantity] = useState<'none' | 'asc' | 'desc'>('none');
@@ -313,7 +322,6 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
   const ITEMS_PER_PAGE = 8;
   const systemDisplayName = system.toUpperCase();
 
-  // Fetch dashboard data on mount (original API logic)
   useEffect(() => {
     fetchDashboardData();
   }, [mainCategoryId]);
@@ -349,39 +357,6 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
     } catch (error) {
       console.error('Error:', error);
       alert('Failed to stock in items');
-    }
-  };
-
-  const handleMoveFromViewModal = async (selectedSerials: string[], location: string) => {
-    if (!selectedItem) return;
-
-    try {
-      const statusMap: Record<string, string> = {
-        'In use': 'IN_USE',
-        'Stock out': 'STOCK_OUT',
-        'Damage': 'DAMAGED',
-      };
-
-      const response = await fetch('/api/stockin/move', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serialNumbers: selectedSerials,
-          status: statusMap[location],
-          remarks: null,
-        }),
-      });
-
-      if (response.ok) {
-        await fetchDashboardData();
-        setSerialModalOpen(false);
-      } else {
-        const error = await response.json();
-        alert(error.message || 'Failed to move items');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to move items');
     }
   };
 
@@ -463,7 +438,6 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
       return matchesSearch && matchesDate;
     });
 
-    // Apply sorting
     if (sortDate !== 'none') {
       filtered = [...filtered].sort((a, b) => {
         const dateA = new Date(a.date).getTime();
@@ -518,7 +492,6 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
       <Head title={`Stock In - ${systemDisplayName}`} />
       <SidebarProvider>
         <USHERSidebar system={system} />
-        {/* h-screen + overflow-hidden locks the page — nothing can scroll */}
         <main className="flex-1 w-full h-screen overflow-hidden flex flex-col">
 
           {/* Fixed header */}
@@ -527,10 +500,9 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">STOCK IN - {systemDisplayName}</h1>
           </div>
 
-          {/* Remaining area — single flex column, no overflow */}
           <div className="flex-1 overflow-hidden flex flex-col p-4 gap-4 bg-gray-50 dark:bg-gray-900">
 
-            {/* Search and Filter Bar — fixed height */}
+            {/* Search and Filter Bar */}
             <div className="flex-shrink-0 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 space-y-3">
               <div className="flex gap-3 flex-col lg:flex-row items-end">
                 <div className="flex-1 relative">
@@ -609,10 +581,8 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
               </div>
             </div>
 
-            {/* Table card — fills remaining height, no internal scroll */}
+            {/* Table card */}
             <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col">
-
-              {/* Table area */}
               <div className="flex-1 overflow-hidden">
                 <table className="w-full table-fixed">
                   <thead className="bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
@@ -692,7 +662,6 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
                             </td>
                           </tr>
                         ))}
-                        {/* Filler rows keep table height consistent */}
                         {Array.from({ length: ITEMS_PER_PAGE - paginatedEntries.length }).map((_, idx) => (
                           <tr key={`empty-${idx}`}>
                             <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
@@ -709,7 +678,7 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
                 </table>
               </div>
 
-              {/* Pagination — pinned to bottom inside the card */}
+              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex-shrink-0 flex items-center justify-center gap-1 py-3 border-t border-gray-200 dark:border-gray-700 flex-wrap">
                   <button
@@ -748,7 +717,6 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
           </div>
         </main>
 
-        {/* Add Stock In Modal (original component) */}
         <AddStockInModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
@@ -756,7 +724,6 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
           mainCategoryId={mainCategoryId}
         />
 
-        {/* Serial Number View Modal */}
         <SerialNumberViewModal
           isOpen={serialModalOpen}
           onClose={() => setSerialModalOpen(false)}
@@ -764,7 +731,6 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
           onUpdateRemarks={handleUpdateRemarks}
         />
 
-        {/* Move Modal (original component) */}
         <MoveModal
           isOpen={isMoveModalOpen}
           onClose={() => setIsMoveModalOpen(false)}
@@ -773,7 +739,6 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
           currentStatus="IN_STOCK"
         />
 
-        {/* Delete Confirmation */}
         <ConfirmDialog
           isOpen={deleteConfirm !== null}
           title="Delete Stock In Entry"
