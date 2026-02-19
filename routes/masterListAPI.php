@@ -58,3 +58,8 @@ Route::delete('/stockin/entry', [StockInController::class, 'deleteStockInEntry']
 // Get items available for move (in stock)
 Route::get('/stockin/items-for-move/{mainCategoryId}', [StockInController::class, 'getItemsForMove']);
 
+
+
+Route::get('/stockout/dashboard/{mainCategoryId}', [StockInController::class, 'getStockOutDashboard']);
+
+Route::get('/stockin/subcategory-boxes/{subcategoryName}/{mainCategoryId}', [StockInController::class, 'getBoxesForSubcategory']);

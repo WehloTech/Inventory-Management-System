@@ -201,9 +201,9 @@ const SerialNumberViewModal: React.FC<{
                     <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Supplier</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody>
                   {paginatedSerials.map((item, idx) => (
-                    <tr key={`${entry.id}-${item.serial}-${idx}`} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <tr key={`${entry.id}-${item.serial}-${idx}`} className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${idx < paginatedSerials.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}>
                       <td className="px-3 sm:px-6 py-3 text-sm text-gray-500 dark:text-gray-400">
                         {(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}
                       </td>
@@ -212,6 +212,15 @@ const SerialNumberViewModal: React.FC<{
                         <span className="text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-full">{item.boxName}</span>
                       </td>
                       <td className="px-3 sm:px-6 py-3 text-sm text-gray-900 dark:text-white">{item.supplier}</td>
+                    </tr>
+                  ))}
+                  {/* Filler rows — keep modal height consistent across pages */}
+                  {Array.from({ length: ITEMS_PER_PAGE - paginatedSerials.length }).map((_, idx) => (
+                    <tr key={`empty-${idx}`}>
+                      <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
+                      <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
+                      <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
+                      <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
                     </tr>
                   ))}
                 </tbody>

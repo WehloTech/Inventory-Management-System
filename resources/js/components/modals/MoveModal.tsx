@@ -7,7 +7,6 @@ interface SerialNumberGroup {
   supplierName: string;
 }
 
-// Update interface
 interface StockInDashboardEntry {
   id: string;
   boxName: string;
@@ -23,7 +22,7 @@ interface MoveModalProps {
   onClose: () => void;
   mainCategoryId: number;
   onMoveSuccess: () => void;
-  currentStatus?: string; // Add this prop
+  currentStatus?: string;
 }
 
 const ConfirmDialog: React.FC<{
@@ -52,7 +51,6 @@ const ConfirmDialog: React.FC<{
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{message}</p>
           </div>
         </div>
-
         <div className="p-6 flex gap-3">
           <button
             onClick={onCancel}
@@ -74,12 +72,33 @@ const ConfirmDialog: React.FC<{
   );
 };
 
+const getDestinationOptions = (currentStatus?: string) => {
+  const statusMap: Record<string, string> = {
+    'IN_STOCK':  'Stock in',
+    'IN_USE':    'In use',
+    'STOCK_OUT': 'Stock out',
+    'DAMAGED':   'Damage',
+    'DAMAGE':    'Damage',
+  };
+
+  const currentLabel = currentStatus ? statusMap[currentStatus] : null;
+
+  const options = [
+    { label: 'Stock in',  value: 'Stock in'  },
+    { label: 'In use',    value: 'In use'    },
+    { label: 'Stock out', value: 'Stock out' },
+    { label: 'Damage',    value: 'Damage'    },
+  ];
+
+  return currentLabel ? options.filter((o) => o.label !== currentLabel) : options;
+};
+
 export const MoveModal: React.FC<MoveModalProps> = ({
   isOpen,
   onClose,
   mainCategoryId,
   onMoveSuccess,
-  currentStatus, // No default value here
+  currentStatus,
 }) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [dashboardEntries, setDashboardEntries] = useState<StockInDashboardEntry[]>([]);
@@ -91,25 +110,35 @@ export const MoveModal: React.FC<MoveModalProps> = ({
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Box selection for moving back to Stock in
+  const [boxesForSubcategory, setBoxesForSubcategory] = useState<{ id: number; name: string }[]>([]);
+  const [selectedBoxId, setSelectedBoxId] = useState<number | null>(null);
+  const [searchBox, setSearchBox] = useState('');
+  const [showBoxDropdown, setShowBoxDropdown] = useState(false);
+
+  const destinationOptions = getDestinationOptions(currentStatus);
+
   useEffect(() => {
     if (isOpen) {
       fetchStockInItems();
     } else {
-      // Reset when modal closes
+      // Reset all state when modal closes
       setStep(1);
       setSearchItem('');
       setSelectedEntry(null);
       setSelectedSerials(new Set());
       setLocation('');
       setRemarks('');
+      setBoxesForSubcategory([]);
+      setSelectedBoxId(null);
+      setSearchBox('');
+      setShowBoxDropdown(false);
     }
   }, [isOpen, mainCategoryId]);
-
 
   const fetchStockInItems = async () => {
     try {
       setLoading(true);
-      // Add status query parameter
       const response = await fetch(
         `/api/stockin/items-for-move/${mainCategoryId}?status=${currentStatus}`
       );
@@ -122,16 +151,39 @@ export const MoveModal: React.FC<MoveModalProps> = ({
     }
   };
 
+  const fetchBoxesForSubcategory = async (subcategoryName: string) => {
+    try {
+      const url = `/api/stockin/subcategory-boxes/${encodeURIComponent(subcategoryName)}/${mainCategoryId}`;
+      console.log('Fetching boxes from:', url);
+      
+      const response = await fetch(url);
+      console.log('Response status:', response.status);
+      
+      const data = await response.json();
+      console.log('Boxes data received:', data); // <-- check this in browser console
+      
+      const boxes = Array.isArray(data) ? data : [];
+      console.log('Boxes array:', boxes);
+      
+      setBoxesForSubcategory(boxes);
+      if (boxes.length > 0) {
+        setShowBoxDropdown(true);
+      }
+    } catch (error) {
+      console.error('Error fetching boxes:', error);
+      setBoxesForSubcategory([]);
+    }
+  };
+
   if (!isOpen) return null;
 
-const uniqueItems = dashboardEntries.map((e) => e.itemName);
+  const uniqueItems = dashboardEntries.map((e) => e.itemName);
   const filteredItems = searchItem
     ? uniqueItems.filter((item) => item.toLowerCase().includes(searchItem.toLowerCase()))
     : uniqueItems;
 
-  // Update handleSelectItem to match on displayName
-const handleSelectItem = (itemName: string) => {
-  const entry = dashboardEntries.find((e) => e.itemName === itemName);
+  const handleSelectItem = (itemName: string) => {
+    const entry = dashboardEntries.find((e) => e.itemName === itemName);
     if (entry) {
       setSelectedEntry(entry);
       setSelectedSerials(new Set());
@@ -146,9 +198,10 @@ const handleSelectItem = (itemName: string) => {
   };
 
   const handleMoveClick = () => {
-    if (selectedEntry && selectedSerials.size > 0 && location) {
-      setShowConfirm(true);
-    }
+    if (!selectedEntry || selectedSerials.size === 0 || !location) return;
+    // Box is required when moving to Stock in
+    if (location === 'Stock in' && !selectedBoxId) return;
+    setShowConfirm(true);
   };
 
   const handleConfirmMove = async () => {
@@ -157,11 +210,11 @@ const handleSelectItem = (itemName: string) => {
     try {
       setLoading(true);
 
-      // Map location to status
       const statusMap: Record<string, string> = {
-        'In use': 'IN_USE',
+        'Stock in':  'IN_STOCK',
+        'In use':    'IN_USE',
         'Stock out': 'STOCK_OUT',
-        'Damage': 'DAMAGED',
+        'Damage':    'DAMAGED',
       };
 
       const response = await fetch('/api/stockin/move', {
@@ -171,26 +224,30 @@ const handleSelectItem = (itemName: string) => {
           serialNumbers: Array.from(selectedSerials),
           status: statusMap[location],
           remarks: remarks || null,
+          boxId: location === 'Stock in' ? selectedBoxId : null,
         }),
       });
 
-      if (response.ok) {
-        // Reset everything
-        setStep(1);
-        setSearchItem('');
-        setSelectedEntry(null);
-        setSelectedSerials(new Set());
-        setLocation('');
-        setRemarks('');
-        setShowConfirm(false);
-        
-        // Notify parent to refresh
-        onMoveSuccess();
-        onClose();
-      } else {
+      if (!response.ok) {
         const error = await response.json();
         alert(error.message || 'Failed to move items');
+        return;
       }
+
+      // Success — reset everything
+      setStep(1);
+      setSearchItem('');
+      setSelectedEntry(null);
+      setSelectedSerials(new Set());
+      setLocation('');
+      setRemarks('');
+      setBoxesForSubcategory([]);
+      setSelectedBoxId(null);
+      setSearchBox('');
+      setShowBoxDropdown(false);
+      setShowConfirm(false);
+      onMoveSuccess();
+      onClose();
     } catch (error) {
       console.error('Error moving items:', error);
       alert('Failed to move items');
@@ -198,6 +255,11 @@ const handleSelectItem = (itemName: string) => {
       setLoading(false);
     }
   };
+
+  const selectedBoxName = boxesForSubcategory.find((b) => b.id === selectedBoxId)?.name || '';
+  const filteredBoxes = boxesForSubcategory.filter((b) =>
+    b.name != null && b.name.toLowerCase().includes(searchBox.toLowerCase())
+  );
 
   return (
     <>
@@ -231,6 +293,7 @@ const handleSelectItem = (itemName: string) => {
               </div>
             )}
 
+            {/* Step 1 — Select Item */}
             {!loading && step === 1 && (
               <>
                 <div>
@@ -248,16 +311,15 @@ const handleSelectItem = (itemName: string) => {
 
                 {filteredItems.length > 0 ? (
                   <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg max-h-64 overflow-y-auto">
-                  
-                  {filteredItems.map((displayName) => (
-                    <button
-                      key={displayName}
-                      onClick={() => handleSelectItem(displayName)}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600 last:border-b-0 text-sm text-gray-900 dark:text-white font-medium"
-                    >
-                      {displayName}
-                    </button>
-                  ))}
+                    {filteredItems.map((itemName) => (
+                      <button
+                        key={itemName}
+                        onClick={() => handleSelectItem(itemName)}
+                        className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600 last:border-b-0 text-sm text-gray-900 dark:text-white font-medium"
+                      >
+                        {itemName}
+                      </button>
+                    ))}
                   </div>
                 ) : (
                   <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
@@ -267,6 +329,7 @@ const handleSelectItem = (itemName: string) => {
               </>
             )}
 
+            {/* Step 2 — Select Serials */}
             {!loading && step === 2 && selectedEntry && (
               <>
                 <div>
@@ -291,29 +354,31 @@ const handleSelectItem = (itemName: string) => {
                         No available serials with current status
                       </div>
                     ) : (
-                    selectedEntry.serialGroups.map((group) =>
-                      group.serialNumbers.map((item, idx) => (
-                        <div
-                          key={`${group.supplierId}-${idx}`}
-                          className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-600 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedSerials.has(item.serial)}
-                            onChange={() => handleToggleSerial(item.serial)}
-                            className="w-4 h-4 cursor-pointer"
-                          />
-                          <span className="text-sm text-gray-900 dark:text-white font-medium flex-1">
-                            {item.serial}
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-full">
-                            {item.boxName}
-                          </span>
-                        </div>
-                      ))
-                    ))}
+                      selectedEntry.serialGroups.map((group) =>
+                        group.serialNumbers.map((item, idx) => (
+                          <div
+                            key={`${group.supplierId}-${idx}`}
+                            className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-600 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedSerials.has(item.serial)}
+                              onChange={() => handleToggleSerial(item.serial)}
+                              className="w-4 h-4 cursor-pointer"
+                            />
+                            <span className="text-sm text-gray-900 dark:text-white font-medium flex-1">
+                              {item.serial}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-full">
+                              {item.boxName}
+                            </span>
+                          </div>
+                        ))
+                      )
+                    )}
                   </div>
                 </div>
+
                 <button
                   onClick={() => setStep(3)}
                   disabled={selectedSerials.size === 0}
@@ -324,6 +389,7 @@ const handleSelectItem = (itemName: string) => {
               </>
             )}
 
+            {/* Step 3 — Select Destination */}
             {!loading && step === 3 && selectedEntry && (
               <>
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
@@ -332,22 +398,97 @@ const handleSelectItem = (itemName: string) => {
                   </p>
                 </div>
 
+                {/* Move to */}
                 <div>
                   <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
                     Move to:
                   </label>
                   <select
                     value={location}
-                    onChange={(e) => setLocation(e.target.value)}
+                    onChange={(e) => {
+                      setLocation(e.target.value);
+                      // Reset box selection when destination changes
+                      setSelectedBoxId(null);
+                      setSearchBox('');
+                      setBoxesForSubcategory([]);
+                      // Fetch boxes if moving to Stock in
+                      if (e.target.value === 'Stock in') {
+                        fetchBoxesForSubcategory(selectedEntry.itemName);
+                      }
+                    }}
                     className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   >
-                    <option value="">Select location</option>
-                    <option value="In use">In use</option>
-                    <option value="Stock out">Stock out</option>
-                    <option value="Damage">Damage</option>
+                    <option value="">Select destination</option>
+                    {destinationOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
+                {/* Box selector — only shown when moving to Stock in */}
+                {location === 'Stock in' && (
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
+                      Box:
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={selectedBoxId ? selectedBoxName : searchBox}
+                        onChange={(e) => {
+                          if (!selectedBoxId) {
+                            setSearchBox(e.target.value);
+                            setShowBoxDropdown(true);
+                          }
+                        }}
+                        onFocus={() => setShowBoxDropdown(true)}
+                        placeholder="Select box..."
+                        readOnly={!!selectedBoxId}
+                        className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+                      {selectedBoxId && (
+                        <button
+                          onClick={() => {
+                            setSelectedBoxId(null);
+                            setSearchBox('');
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        >
+                          ×
+                        </button>
+                      )}
+                      {showBoxDropdown && !selectedBoxId && filteredBoxes.length > 0 && (
+                        <div className="absolute top-full mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                          {filteredBoxes.map((box) => (
+                            <button
+                              key={box.id}
+                              onClick={() => {
+                                setSelectedBoxId(box.id);
+                                setShowBoxDropdown(false);
+                                setSearchBox('');
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600 last:border-b-0 text-sm"
+                            >
+                              {box.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {showBoxDropdown && !selectedBoxId && filteredBoxes.length === 0 && (
+                        <div className="absolute top-full mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
+                          <p className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">No boxes found</p>
+                        </div>
+                      )}
+                    </div>
+                    {location === 'Stock in' && !selectedBoxId && (
+                      <p className="text-xs text-red-500 mt-1">Box is required when moving to Stock in</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Remarks */}
                 <div>
                   <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
                     Remarks:
@@ -361,6 +502,7 @@ const handleSelectItem = (itemName: string) => {
                   />
                 </div>
 
+                {/* Items to Move */}
                 <div>
                   <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
                     Items to Move:
@@ -380,7 +522,11 @@ const handleSelectItem = (itemName: string) => {
 
                 <button
                   onClick={handleMoveClick}
-                  disabled={!location || selectedSerials.size === 0}
+                  disabled={
+                    !location ||
+                    selectedSerials.size === 0 ||
+                    (location === 'Stock in' && !selectedBoxId)
+                  }
                   className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-50 transition text-sm sm:text-base"
                 >
                   Move Confirm
@@ -395,7 +541,7 @@ const handleSelectItem = (itemName: string) => {
       <ConfirmDialog
         isOpen={showConfirm}
         title="Confirm Move"
-        message={`Move ${selectedSerials.size} item(s) to ${location}?`}
+        message={`Move ${selectedSerials.size} item(s) to "${location}"${location === 'Stock in' && selectedBoxName ? ` → ${selectedBoxName}` : ''}?`}
         onConfirm={handleConfirmMove}
         onCancel={() => setShowConfirm(false)}
         confirmText="Move"
