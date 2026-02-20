@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
 import {
@@ -24,6 +24,7 @@ interface SerialNumberViewProps {
 const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryId, mainCategoryId, system }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [filters, setFilters] = useState({
     inStock: false,
     inUse: false,
@@ -31,19 +32,46 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
     damage: false,
   });
 
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const ROW_HEIGHT = useRef(57);
+  const HEADER_HEIGHT = useRef(45);
+
   // Add Box Modal states
   const [isBoxModalOpen, setIsBoxModalOpen] = useState(false);
   const [boxFormData, setBoxFormData] = useState({ boxNumber: '' });
   const [boxError, setBoxError] = useState('');
   const [showBoxError, setShowBoxError] = useState(false);
 
-  const itemsPerPage = 10;
-
   const [serialItems, setSerialItems] = useState<SerialItem[]>([]);
   const [boxNumber, setBoxNumber] = useState('');
   const [itemName, setItemName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Dynamic items per page based on container height — same as MasterList
+  useEffect(() => {
+    const calculateItemsPerPage = () => {
+      if (tableContainerRef.current) {
+        const containerHeight = tableContainerRef.current.clientHeight;
+        const thead = tableContainerRef.current.querySelector('thead');
+        const firstRow = tableContainerRef.current.querySelector('tbody tr');
+        if (thead) HEADER_HEIGHT.current = thead.clientHeight;
+        if (firstRow) ROW_HEIGHT.current = firstRow.clientHeight;
+        const availableHeight = containerHeight - HEADER_HEIGHT.current;
+        const rows = Math.floor(availableHeight / ROW_HEIGHT.current);
+        setItemsPerPage(Math.max(1, rows));
+      }
+    };
+
+    requestAnimationFrame(calculateItemsPerPage);
+
+    const resizeObserver = new ResizeObserver(calculateItemsPerPage);
+    if (tableContainerRef.current) {
+      resizeObserver.observe(tableContainerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [loading]);
 
   // Fetch serial items from API (original logic - untouched)
   useEffect(() => {
@@ -288,7 +316,6 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
       <Head title={`${boxNumber} - ${itemName}`} />
       <SidebarProvider>
         <USHERSidebar />
-        {/* h-screen + overflow-hidden locks the page — nothing can scroll */}
         <main className="flex-1 w-full h-screen overflow-hidden flex flex-col">
 
           {/* Fixed header strip */}
@@ -297,12 +324,11 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">Masterlist</h1>
           </div>
 
-          {/* Remaining area — single flex column, no overflow */}
-          <div className="flex-1 overflow-hidden flex flex-col p-4 gap-4 bg-gray-50 dark:bg-gray-900">
+          {/* Remaining area */}
+          <div className="flex-1 overflow-auto flex flex-col p-4 gap-4 bg-gray-50 dark:bg-gray-900">
 
-            {/* Search, Add, and Filters — fixed height */}
+            {/* Search, Add, and Filters */}
             <div className="flex-shrink-0 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 space-y-4">
-              {/* Search and Add Bar */}
               <div className="flex gap-3 flex-col lg:flex-row items-end">
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -326,50 +352,26 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
               {/* Filters Row */}
               <div className="flex items-center gap-4 flex-wrap">
                 <span className="text-gray-900 dark:text-white font-medium text-sm">Filter:</span>
-
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.inStock}
-                    onChange={() => handleFilterChange('inStock')}
-                    className="w-4 h-4 rounded cursor-pointer"
-                  />
+                  <input type="checkbox" checked={filters.inStock} onChange={() => handleFilterChange('inStock')} className="w-4 h-4 rounded cursor-pointer" />
                   <span className="text-gray-900 dark:text-white text-sm">In stock</span>
                 </label>
-
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.inUse}
-                    onChange={() => handleFilterChange('inUse')}
-                    className="w-4 h-4 rounded cursor-pointer"
-                  />
+                  <input type="checkbox" checked={filters.inUse} onChange={() => handleFilterChange('inUse')} className="w-4 h-4 rounded cursor-pointer" />
                   <span className="text-gray-900 dark:text-white text-sm">In use</span>
                 </label>
-
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.stockOut}
-                    onChange={() => handleFilterChange('stockOut')}
-                    className="w-4 h-4 rounded cursor-pointer"
-                  />
+                  <input type="checkbox" checked={filters.stockOut} onChange={() => handleFilterChange('stockOut')} className="w-4 h-4 rounded cursor-pointer" />
                   <span className="text-gray-900 dark:text-white text-sm">Stock out</span>
                 </label>
-
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.damage}
-                    onChange={() => handleFilterChange('damage')}
-                    className="w-4 h-4 rounded cursor-pointer"
-                  />
+                  <input type="checkbox" checked={filters.damage} onChange={() => handleFilterChange('damage')} className="w-4 h-4 rounded cursor-pointer" />
                   <span className="text-gray-900 dark:text-white text-sm">Damage</span>
                 </label>
               </div>
             </div>
 
-            {/* Breadcrumb — fixed height */}
+            {/* Breadcrumb */}
             <div className="flex-shrink-0 px-2">
               <div className="flex items-center gap-2 text-sm">
                 <button
@@ -390,12 +392,10 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
               </div>
             </div>
 
-            {/* Table card — fills all remaining height, no internal scroll */}
+            {/* Table card */}
             <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col">
-
-              {/* Table area — overflow hidden, filler rows keep height consistent */}
-              <div className="flex-1 overflow-hidden">
-                <table className="w-full table-fixed">
+              <div className="flex-1 overflow-hidden" ref={tableContainerRef}>
+                <table className="w-full h-full table-fixed">
                   <thead className="bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                     <tr>
                       <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
@@ -412,7 +412,7 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
 
                   <tbody>
                     {paginatedItems.length === 0 ? (
-                      <tr>
+                      <tr className="h-full">
                         <td colSpan={3} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
                           No items found. Try adjusting your search or filters.
                         </td>
@@ -424,7 +424,7 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
                           return (
                             <tr
                               key={`${item.serial}-${index}`}
-                              className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${index < paginatedItems.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
+                              className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
                             >
                               <td className="px-4 py-3.5 text-center text-gray-900 dark:text-white font-medium text-sm">
                                 {item.serial}
@@ -445,57 +445,53 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
                             </tr>
                           );
                         })}
-                        {/* Filler rows keep table height consistent and prevent scroll */}
-                        {Array.from({ length: itemsPerPage - paginatedItems.length }).map((_, idx) => (
-                          <tr key={`empty-${idx}`}>
-                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
-                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
-                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
-                          </tr>
-                        ))}
+                        {/* Filler row stretches to fill remaining space */}
+                        <tr className="h-full">
+                          <td colSpan={3} />
+                        </tr>
                       </>
                     )}
                   </tbody>
                 </table>
               </div>
-
-              {/* Pagination — pinned to bottom inside the card */}
-              {totalPages > 1 && (
-                <div className="flex-shrink-0 flex items-center justify-center gap-1 py-3 border-t border-gray-200 dark:border-gray-700 flex-wrap">
-                  <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
-                  >
-                    &lt;
-                  </button>
-
-                  <div className="flex gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`px-2.5 py-1.5 border-2 font-semibold rounded transition-colors text-xs ${
-                          currentPage === page
-                            ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
-                            : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
-                  >
-                    &gt;
-                  </button>
-                </div>
-              )}
             </div>
+
+            {/* Pagination — outside table card, same as MasterList */}
+            {totalPages > 1 && (
+              <div className="flex-shrink-0 flex items-center justify-center gap-1 py-3 flex-wrap">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
+                >
+                  &lt;
+                </button>
+
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-2.5 py-1.5 border-2 font-semibold rounded transition-colors text-xs ${
+                        currentPage === page
+                          ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                          : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
+                >
+                  &gt;
+                </button>
+              </div>
+            )}
 
           </div>
         </main>

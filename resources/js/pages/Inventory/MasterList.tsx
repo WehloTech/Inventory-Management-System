@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
 import {
@@ -30,8 +30,12 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
   const [boxToDelete, setBoxToDelete] = useState<InventoryBox | null>(null);
   const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
-  
+  const [itemsPerPage, setItemsPerPage] = useState(8);
+
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const ROW_HEIGHT = useRef(57);
+  const HEADER_HEIGHT = useRef(45);
+
   const [inventoryBoxes, setInventoryBoxes] = useState<InventoryBox[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,6 +47,31 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
   const [showBoxError, setShowBoxError] = useState(false);
 
   const systemDisplayName = system.toUpperCase();
+
+  // Dynamic items per page based on container height
+  useEffect(() => {
+  const calculateItemsPerPage = () => {
+    if (tableContainerRef.current) {
+      const containerHeight = tableContainerRef.current.clientHeight;
+      const thead = tableContainerRef.current.querySelector('thead');
+      const firstRow = tableContainerRef.current.querySelector('tbody tr');
+      if (thead) HEADER_HEIGHT.current = thead.clientHeight;
+      if (firstRow) ROW_HEIGHT.current = firstRow.clientHeight;
+      const availableHeight = containerHeight - HEADER_HEIGHT.current;
+      const rows = Math.floor(availableHeight / ROW_HEIGHT.current);
+      setItemsPerPage(Math.max(1, rows));
+    }
+  };
+
+    requestAnimationFrame(calculateItemsPerPage);
+
+    const resizeObserver = new ResizeObserver(calculateItemsPerPage);
+    if (tableContainerRef.current) {
+      resizeObserver.observe(tableContainerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [loading]); // re-run after loading completes so ref is attached
 
   useEffect(() => {
     const fetchBoxes = async () => {
@@ -155,7 +184,6 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
       <Head title={`Master List - ${systemDisplayName}`} />
       <SidebarProvider>
         <USHERSidebar />
-        {/* h-screen + overflow-hidden locks the page — nothing can scroll */}
         <main className="flex-1 w-full h-screen overflow-hidden flex flex-col">
 
           {/* Fixed header strip */}
@@ -166,10 +194,10 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
             </h1>
           </div>
 
-          {/* Remaining area — flex column, no overflow */}
-          <div className="flex-1 overflow-hidden flex flex-col p-4 gap-4 bg-gray-50 dark:bg-gray-900">
+          {/* Remaining area */}
+            <div className="flex-1 overflow-auto flex flex-col p-4 gap-4 bg-gray-50 dark:bg-gray-900">
 
-            {/* Search / Add bar — fixed height */}
+            {/* Search / Add bar */}
             <div className="flex-shrink-0 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex gap-3 flex-col lg:flex-row items-end">
                 <div className="flex-1 relative">
@@ -195,12 +223,10 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
               </div>
             </div>
 
-            {/* Table card — grows to fill remaining height, no internal scroll */}
+            {/* Table card */}
             <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col">
-
-              {/* Table area — overflow hidden, table fills space via filler rows */}
-              <div className="flex-1 overflow-hidden">
-                <table className="w-full table-fixed">
+              <div className="flex-1 overflow-hidden" ref={tableContainerRef}>
+                <table className="w-full h-full table-fixed">
                   <thead className="bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                     <tr>
                       <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
@@ -217,17 +243,17 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
 
                   <tbody>
                     {paginatedBoxes.length === 0 ? (
-                      <tr>
+                      <tr className="h-full">
                         <td colSpan={3} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
                           No boxes found. Create one to get started!
                         </td>
                       </tr>
                     ) : (
                       <>
-                        {paginatedBoxes.map((box, index) => (
+                        {paginatedBoxes.map((box) => (
                           <tr
                             key={box.id}
-                            className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${index < paginatedBoxes.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
+                            className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
                           >
                             <td className="px-4 py-4 text-center text-gray-900 dark:text-white font-medium text-sm">
                               {box.box_name}
@@ -259,23 +285,19 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
                             </td>
                           </tr>
                         ))}
-                        {/* Filler rows keep the table height consistent and prevent scroll */}
-                        {Array.from({ length: itemsPerPage - paginatedBoxes.length }).map((_, idx) => (
-                          <tr key={`empty-${idx}`}>
-                            <td className="px-4 py-4 text-sm text-center">&nbsp;</td>
-                            <td className="px-4 py-4 text-sm text-center">&nbsp;</td>
-                            <td className="px-4 py-4 text-sm text-center">&nbsp;</td>
-                          </tr>
-                        ))}
+                        {/* Filler row that stretches to fill remaining space */}
+                        <tr className="h-full">
+                          <td colSpan={3} className="border-b border-gray-200 dark:border-gray-700" />
+                        </tr>
                       </>
                     )}
                   </tbody>
                 </table>
               </div>
-
-              {/* Pagination — pinned to bottom inside the card */}
+            </div>
+              {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex-shrink-0 flex items-center justify-center gap-1 py-3 border-t border-gray-200 dark:border-gray-700 flex-wrap">
+                  <div className={`flex-shrink-0 flex items-center justify-center gap-1 py-3 flex-wrap ${totalPages <= 1 ? 'invisible' : ''}`}>
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
@@ -309,7 +331,6 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
                   </button>
                 </div>
               )}
-            </div>
 
           </div>
         </main>
