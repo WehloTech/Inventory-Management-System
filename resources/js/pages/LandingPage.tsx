@@ -38,7 +38,7 @@ const LandingPage: LandingPageComponent = () => {
     },
     { 
       id: 'all', 
-      label: 'ALL', 
+      label: 'SHARED', 
       path: '/inventory/all/master-list',
       icon: '/ALL.png'
     },

@@ -173,7 +173,7 @@ const SerialNumberView: React.FC<SerialNumberViewProps> = ({ boxId, subcategoryI
       'IN_STOCK': 'Stock in',
       'IN_USE': 'In use',
       'STOCK_OUT': 'Stock out',
-      'DAMAGE': 'Damage',
+      'DAMAGED': 'Damage',
     };
     return statusMap[apiStatus] || apiStatus;
   };

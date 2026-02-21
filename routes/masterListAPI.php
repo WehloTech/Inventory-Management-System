@@ -60,6 +60,33 @@ Route::get('/stockin/items-for-move/{mainCategoryId}', [StockInController::class
 
 
 
+
+// ==============================
+// STOCK OUT API 
+// ==============================
+
 Route::get('/stockout/dashboard/{mainCategoryId}', [StockInController::class, 'getStockOutDashboard']);
 
 Route::get('/stockin/subcategory-boxes/{subcategoryName}/{mainCategoryId}', [StockInController::class, 'getBoxesForSubcategory']);
+
+
+// ==============================
+// IN USE API
+// ==============================
+
+// Get in-use dashboard data
+Route::get('/inuse/dashboard/{mainCategoryId}', [StockInController::class, 'getInUseDashboard']);
+
+// Update remarks for an in-use entry
+Route::post('/inuse/update-remarks', [StockInController::class, 'updateInUseRemarks']);
+
+
+// ==============================
+// STOCK DAMAGE API
+// ==============================
+
+// Get stock damage dashboard data
+Route::get('/stockdamage/dashboard/{mainCategoryId}', [StockInController::class, 'getStockDamageDashboard']);
+
+// Update remarks for a stock damage entry
+Route::post('/stockdamage/update-remarks', [StockInController::class, 'updateDamageRemarks']);

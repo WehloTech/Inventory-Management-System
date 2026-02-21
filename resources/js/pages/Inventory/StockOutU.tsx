@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Head } from '@inertiajs/react';
 import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Search, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import { MoveModal } from '@/components/modals/MoveModal';
+import SerialBatchViewModal, { SerialBatchEntry } from '@/components/modals/SerialBatchViewModal';
 
 interface SerialNumberGroup {
   serialNumbers: { serial: string; boxName: string; batchTime: string }[];
@@ -19,6 +20,8 @@ interface StockOutDashboardEntry {
   totalQuantity: number;
   serialGroups: SerialNumberGroup[];
   remarks: string;
+  batchRemarks: Record<string, string>;  // ADD THIS
+
 }
 
 interface StockOutProps {
@@ -74,185 +77,6 @@ const ConfirmDialog: React.FC<{
   );
 };
 
-const SerialNumberViewModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  entry: StockOutDashboardEntry | null;
-  onUpdateRemarks: (remarks: string) => void;
-}> = ({ isOpen, onClose, entry, onUpdateRemarks }) => {
-  const [remarks, setRemarks] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 5;
-
-  React.useEffect(() => {
-    if (isOpen && entry) {
-      setRemarks(entry.remarks || '');
-      setCurrentPage(1);
-    }
-  }, [entry?.id, isOpen]);
-
-  if (!isOpen || !entry) return null;
-
-  const allSerials = entry.serialGroups.flatMap((group) =>
-    group.serialNumbers.map((item) => ({
-      serial: item.serial,
-      boxName: item.boxName,
-      batchTime: item.batchTime,
-      supplier: group.supplierName,
-    }))
-  );
-
-  const totalPages = Math.ceil(allSerials.length / ITEMS_PER_PAGE);
-  const paginatedSerials = allSerials.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
-
-  return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b-2 border-gray-300 dark:border-gray-700 flex-shrink-0 gap-2 flex-wrap">
-          <button
-            onClick={onClose}
-            className="flex items-center gap-2 text-white font-bold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full transition whitespace-nowrap text-sm"
-          >
-            <ArrowLeft size={20} />
-            Back
-          </button>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white text-center flex-1">
-            Serial #
-          </h2>
-          <div className="w-20" />
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-          {/* Item Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <p className="text-sm font-bold text-gray-900 dark:text-white">Item: {entry.itemName}</p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white">
-                Date:{' '}
-                {new Date(entry.date).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white">Qty: {entry.totalQuantity}</p>
-            </div>
-            <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-3 sm:p-4 bg-gray-50 dark:bg-gray-700">
-              <label className="text-sm font-bold text-gray-900 dark:text-white mb-2 block">Remarks:</label>
-              <textarea
-                value={remarks}
-                onChange={(e) => setRemarks(e.target.value)}
-                placeholder="Add remarks..."
-                rows={3}
-                className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
-              />
-              <button
-                onClick={() => onUpdateRemarks(remarks)}
-                className="mt-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-
-          {/* Serial Numbers Table */}
-          <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-max">
-                <thead className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                  <tr>
-                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">#</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Serial #</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Box</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Time</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">Supplier</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedSerials.map((item, idx) => (
-                    <tr
-                      key={`${entry.id}-${item.serial}-${idx}`}
-                      className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${idx < paginatedSerials.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
-                    >
-                      <td className="px-3 sm:px-6 py-3 text-sm text-gray-500 dark:text-gray-400">
-                        {(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 text-sm text-gray-900 dark:text-white font-medium">{item.serial}</td>
-                      <td className="px-3 sm:px-6 py-3 text-sm text-gray-900 dark:text-white">
-                        <span className="text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-full">{item.boxName}</span>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                        {item.batchTime
-                          ? new Date(item.batchTime).toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true,
-                            })
-                          : '-'}
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 text-sm text-gray-900 dark:text-white">{item.supplier}</td>
-                    </tr>
-                  ))}
-                  {/* Filler rows — keep modal height consistent */}
-                  {Array.from({ length: ITEMS_PER_PAGE - paginatedSerials.length }).map((_, idx) => (
-                    <tr key={`empty-${idx}`}>
-                      <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
-                      <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
-                      <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
-                      <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
-                      <td className="px-3 sm:px-6 py-3 text-sm">&nbsp;</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-3 sm:px-6 py-3 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 gap-2 flex-wrap">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 text-sm"
-                >
-                  &lt;
-                </button>
-                <div className="flex gap-1 flex-wrap justify-center">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-2 py-1 text-xs rounded font-medium ${
-                        currentPage === page
-                          ? 'bg-blue-600 text-white'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 text-sm"
-                >
-                  &gt;
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // Main Component
 const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
@@ -266,6 +90,12 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
   const [selectedItem, setSelectedItem] = useState<StockOutDashboardEntry | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
+
+  // Dynamic items per page — mirrors MasterList approach
+  const [itemsPerPage, setItemsPerPage] = useState(8);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const ROW_HEIGHT = useRef(57);
+  const HEADER_HEIGHT = useRef(45);
 
   const [sortDate, setSortDate] = useState<'none' | 'asc' | 'desc'>('none');
   const [sortItem, setSortItem] = useState<'none' | 'asc' | 'desc'>('none');
@@ -292,8 +122,32 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
     setCurrentPage(1);
   };
 
-  const ITEMS_PER_PAGE = 8;
   const systemDisplayName = system.toUpperCase();
+
+  // Dynamic items per page based on container height — same as MasterList
+  useEffect(() => {
+    const calculateItemsPerPage = () => {
+      if (tableContainerRef.current) {
+        const containerHeight = tableContainerRef.current.clientHeight;
+        const thead = tableContainerRef.current.querySelector('thead');
+        const firstRow = tableContainerRef.current.querySelector('tbody tr');
+        if (thead) HEADER_HEIGHT.current = thead.clientHeight;
+        if (firstRow) ROW_HEIGHT.current = firstRow.clientHeight;
+        const availableHeight = containerHeight - HEADER_HEIGHT.current;
+        const rows = Math.floor(availableHeight / ROW_HEIGHT.current);
+        setItemsPerPage(Math.max(1, rows));
+      }
+    };
+
+    requestAnimationFrame(calculateItemsPerPage);
+
+    const resizeObserver = new ResizeObserver(calculateItemsPerPage);
+    if (tableContainerRef.current) {
+      resizeObserver.observe(tableContainerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [loading]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -316,29 +170,27 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
     fetchDashboardData();
   };
 
-  const handleUpdateRemarks = async (remarks: string) => {
+  const handleUpdateBatchRemarks = async (batchTime: string, remarks: string, batchSerials: string[]) => {
     if (!selectedItem) return;
-
     try {
-      const allSerials = selectedItem.serialGroups.flatMap(g => g.serialNumbers.map(s => s.serial));
-
-      const response = await fetch('/api/stockin/update-remarks', {
+      const response = await fetch('/api/stockout/update-remarks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serialNumbers: allSerials, remarks }),
+        body: JSON.stringify({ serialNumbers: batchSerials, remarks }),
       });
-
       if (response.ok) {
-        setDashboardEntries((prev) =>
-          prev.map((entry) =>
-            entry.id === selectedItem.id ? { ...entry, remarks } : entry
+        setDashboardEntries(prev =>
+          prev.map(entry =>
+            entry.id === selectedItem.id
+              ? { ...entry, batchRemarks: { ...entry.batchRemarks, [batchTime]: remarks } }
+              : entry
           )
         );
-        setSelectedItem((prev) => (prev ? { ...prev, remarks } : null));
+        setSelectedItem(prev =>
+          prev ? { ...prev, batchRemarks: { ...prev.batchRemarks, [batchTime]: remarks } } : null
+        );
       }
-    } catch (error) {
-      console.error('Error updating remarks:', error);
-    }
+    } catch (error) { console.error('Error updating remarks:', error); }
   };
 
   const filteredEntries = useMemo(() => {
@@ -378,10 +230,10 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
     return filtered;
   }, [dashboardEntries, searchQuery, dateFilter, filterType, startDate, endDate, sortDate, sortItem, sortQuantity]);
 
-  const totalPages = Math.ceil(filteredEntries.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
   const paginatedEntries = filteredEntries.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   if (loading) {
@@ -417,7 +269,7 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">STOCK OUT - {systemDisplayName}</h1>
           </div>
 
-          <div className="flex-1 overflow-hidden flex flex-col p-4 gap-4 bg-gray-50 dark:bg-gray-900">
+          <div className="flex-1 overflow-auto flex flex-col p-4 gap-4 bg-gray-50 dark:bg-gray-900">
 
             {/* Search and Filter Bar */}
             <div className="flex-shrink-0 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 space-y-3">
@@ -493,8 +345,8 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
 
             {/* Table card */}
             <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col">
-              <div className="flex-1 overflow-hidden">
-                <table className="w-full table-fixed">
+              <div className="flex-1 overflow-hidden" ref={tableContainerRef}>
+                <table className="w-full h-full table-fixed">
                   <thead className="bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                     <tr>
                       <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
@@ -512,40 +364,38 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
                           Quantity <span>{sortQuantity === 'none' ? '↕' : sortQuantity === 'asc' ? '↑' : '↓'}</span>
                         </button>
                       </th>
-                      <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">Remarks</th>
                       <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">Serial #</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {paginatedEntries.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
+                      <tr className="h-full">
+                        <td colSpan={4} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
                           No stock out entries found
                         </td>
                       </tr>
                     ) : (
                       <>
-                        {paginatedEntries.map((entry, index) => (
+                        {paginatedEntries.map((entry) => (
                           <tr
                             key={entry.id}
-                            className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${index < paginatedEntries.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
+                            className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
                           >
-                            <td className="px-4 py-3.5 text-sm text-gray-900 dark:text-white font-medium text-center">
+                            <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium text-center">
                               {new Date(entry.date).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
                                 day: 'numeric',
                               })}
                             </td>
-                            <td className="px-4 py-3.5 text-sm text-gray-900 dark:text-white font-medium text-center">{entry.itemName}</td>
-                            <td className="px-4 py-3.5 text-sm text-center">
+                            <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium text-center">{entry.itemName}</td>
+                            <td className="px-4 py-4 text-sm text-center">
                               <span className="px-2.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full font-semibold text-xs">
                                 {entry.totalQuantity}
                               </span>
                             </td>
-                            <td className="px-4 py-3.5 text-sm text-gray-600 dark:text-gray-400 text-center">{entry.remarks || '-'}</td>
-                            <td className="px-4 py-3.5 text-sm text-center">
+                            <td className="px-4 py-4 text-sm text-center">
                               <button
                                 onClick={() => {
                                   setSelectedItem(entry);
@@ -562,66 +412,61 @@ const StockOut: React.FC<StockOutProps> = ({ mainCategoryId, system }) => {
                             </td>
                           </tr>
                         ))}
-                        {Array.from({ length: ITEMS_PER_PAGE - paginatedEntries.length }).map((_, idx) => (
-                          <tr key={`empty-${idx}`}>
-                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
-                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
-                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
-                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
-                            <td className="px-4 py-3.5 text-sm text-center">&nbsp;</td>
-                          </tr>
-                        ))}
+                        {/* Filler row that stretches to fill remaining space */}
+                        <tr className="h-full">
+                          <td colSpan={4} className="border-b border-gray-200 dark:border-gray-700" />
+                        </tr>
                       </>
                     )}
                   </tbody>
                 </table>
               </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex-shrink-0 flex items-center justify-center gap-1 py-3 border-t border-gray-200 dark:border-gray-700 flex-wrap">
-                  <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
-                  >
-                    &lt;
-                  </button>
-                  <div className="flex gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`px-2.5 py-1.5 border-2 font-semibold rounded transition-colors text-xs ${
-                          currentPage === page
-                            ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
-                            : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
-                  >
-                    &gt;
-                  </button>
-                </div>
-              )}
             </div>
+
+            {/* Pagination — outside the table card, same as MasterList */}
+            {totalPages > 1 && (
+              <div className="flex-shrink-0 flex items-center justify-center gap-1 py-3 flex-wrap">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
+                >
+                  &lt;
+                </button>
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-2.5 py-1.5 border-2 font-semibold rounded transition-colors text-xs ${
+                        currentPage === page
+                          ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                          : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
+                >
+                  &gt;
+                </button>
+              </div>
+            )}
 
           </div>
         </main>
 
-        <SerialNumberViewModal
-          isOpen={serialModalOpen}
-          onClose={() => setSerialModalOpen(false)}
-          entry={selectedItem}
-          onUpdateRemarks={handleUpdateRemarks}
-        />
+      <SerialBatchViewModal
+        isOpen={serialModalOpen}
+        onClose={() => setSerialModalOpen(false)}
+        entry={selectedItem as SerialBatchEntry | null}
+        onUpdateBatchRemarks={handleUpdateBatchRemarks}
+      />
 
         <MoveModal
           isOpen={isMoveModalOpen}
