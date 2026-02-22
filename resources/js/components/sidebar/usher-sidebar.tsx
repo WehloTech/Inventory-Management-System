@@ -32,7 +32,7 @@ const systemLogos: Record<string, string> = {
   usherette: '/usherrete.jpg',
   wehlo: '/wehlo.png',
   hoclomac: '/hoclomac.jpg',
-  all: '/ALL.png',
+  shared: '/ALL.png',
 };
 
 const getNavItems = (system: string): NavItem[] => [

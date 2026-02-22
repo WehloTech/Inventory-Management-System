@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Search, ArrowLeft } from 'lucide-react';
 import { MoveModal } from '@/components/modals/MoveModal';
 import SerialBatchViewModal, { SerialBatchEntry } from '@/components/modals/SerialBatchViewModal';
+import { getCategoryColor } from '@/utils/categoryColors';
 
 interface SerialNumberGroup {
   serialNumbers: { serial: string; boxName: string; batchTime: string }[];
@@ -21,6 +22,7 @@ interface InUseDashboardEntry {
   serialGroups: SerialNumberGroup[];
   remarks: string;
   batchRemarks: Record<string, string>;  // ADD THIS
+  mainCategory: string; // ✅ ADD
 
 }
 
@@ -240,12 +242,11 @@ const InUse: React.FC<InUseProps> = ({ mainCategoryId, system }) => {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 text-sm"
                   />
                 </div>
-                <button
-                  onClick={() => setIsMoveModalOpen(true)}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full font-medium text-sm whitespace-nowrap"
-                >
-                  Move
-                </button>
+                  {system !== 'shared' && (
+                    <button onClick={() => setIsMoveModalOpen(true)} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full font-medium text-sm whitespace-nowrap">
+                      Move
+                    </button>
+                  )}
               </div>
 
               <div className="flex gap-3 items-center flex-wrap">
@@ -312,6 +313,12 @@ const InUse: React.FC<InUseProps> = ({ mainCategoryId, system }) => {
                           Item Name <span>{sortItem === 'none' ? '↕' : sortItem === 'asc' ? '↑' : '↓'}</span>
                         </button>
                       </th>
+                        {/* ✅ NEW */}
+                      {system === 'shared' && (
+                        <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                          Inventory
+                        </th>
+                      )}
                       <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
                         <button onClick={handleSortQuantity} className="flex items-center justify-center gap-1 w-full hover:text-gray-900 dark:hover:text-white transition-colors text-xs font-bold uppercase">
                           Quantity <span>{sortQuantity === 'none' ? '↕' : sortQuantity === 'asc' ? '↑' : '↓'}</span>
@@ -324,42 +331,34 @@ const InUse: React.FC<InUseProps> = ({ mainCategoryId, system }) => {
                   <tbody>
                     {paginatedEntries.length === 0 ? (
                       <tr className="h-full">
-                        <td colSpan={4} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan={system === 'shared' ? 5 : 4} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
                           No in-use entries found
                         </td>
                       </tr>
                     ) : (
                       <>
                         {paginatedEntries.map((entry) => (
-                          <tr
-                            key={entry.id}
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
-                          >
+                          <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700">
                             <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium text-center">
-                              {new Date(entry.date).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                              })}
+                              {new Date(entry.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                             </td>
                             <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium text-center">{entry.itemName}</td>
+                            {/* ✅ NEW */}
+                            {system === 'shared' && (
+                              <td className="px-4 py-4 text-sm text-center">
+                                <span className={`px-2.5 py-0.5 ${getCategoryColor(entry.mainCategory)} rounded-full font-semibold text-xs`}>
+                                  {entry.mainCategory}
+                                </span>
+                              </td>
+                            )}
                             <td className="px-4 py-4 text-sm text-center">
                               <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold text-xs">
                                 {entry.totalQuantity}
                               </span>
                             </td>
                             <td className="px-4 py-4 text-sm text-center">
-                              <button
-                                onClick={() => {
-                                  setSelectedItem(entry);
-                                  setSerialModalOpen(true);
-                                }}
-                                className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded font-medium transition-colors text-xs"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                                  <circle cx="12" cy="12" r="3"/>
-                                </svg>
+                              <button onClick={() => { setSelectedItem(entry); setSerialModalOpen(true); }} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded font-medium transition-colors text-xs">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                 View
                               </button>
                             </td>
@@ -367,7 +366,7 @@ const InUse: React.FC<InUseProps> = ({ mainCategoryId, system }) => {
                         ))}
                         {/* Filler row */}
                         <tr className="h-full">
-                          <td colSpan={4} className="border-b border-gray-200 dark:border-gray-700" />
+                          <td colSpan={system === 'shared' ? 5 : 4} className="border-b border-gray-200 dark:border-gray-700" />
                         </tr>
                       </>
                     )}

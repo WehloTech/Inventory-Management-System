@@ -10,6 +10,27 @@ use Illuminate\Support\Facades\DB;
 
 class MasterlistController extends Controller
 {
+    // NEW HELPER
+    private function getCategoryIds(int $mainCategoryId): array
+    {
+        if ($mainCategoryId === 5) {
+            return [1, 2, 4];
+        }
+        return [$mainCategoryId];
+    }
+
+    // NEW HELPER
+    private function getCategoryName(int $mainCategoryId): string
+    {
+        return match($mainCategoryId) {
+            1 => 'Usher',
+            2 => 'Usherette',
+            3 => 'Wehlo',
+            4 => 'Hoclomac',
+            default => 'Unknown',
+        };
+    }
+
     /*
     ======================================================
     GET BOXES BY MAIN CATEGORY
@@ -19,22 +40,25 @@ class MasterlistController extends Controller
     - Action(View)
     ======================================================
     */
-public function getBoxesByCategory($mainCategoryId)
-{
-    $boxes = Box::where('main_category_id', $mainCategoryId)->get()->map(function ($box) {
-        $categoryQty = Item::where('box_id', $box->id)
-            ->distinct('subcategory_id')
-            ->count('subcategory_id');
+    public function getBoxesByCategory($mainCategoryId)
+    {
+        $categoryIds = $this->getCategoryIds((int) $mainCategoryId);
 
-        return [
-            'id' => $box->id,
-            'box_name' => $box->name,
-            'category_quantity' => $categoryQty
-        ];
-    });
+        $boxes = Box::whereIn('main_category_id', $categoryIds)->get()->map(function ($box) {
+            $categoryQty = Item::where('box_id', $box->id)
+                ->distinct('subcategory_id')
+                ->count('subcategory_id');
 
-    return response()->json($boxes);
-}
+            return [
+                'id'                => $box->id,
+                'box_name'          => $box->name,
+                'category_quantity' => $categoryQty,
+                'main_category'     => $this->getCategoryName($box->main_category_id), // ✅ NEW
+            ];
+        });
+
+        return response()->json($boxes);
+    }
 
 /*
 ======================================================
@@ -48,30 +72,33 @@ GET SUBCATEGORY SUMMARY PER BOX
     - current items
     ======================================================
     */
-public function getBoxSubcategories($boxId)
-{
-    $items = Item::where('box_id', $boxId)
-        ->with('subcategory')
-        ->get();
+    public function getBoxSubcategories($boxId)
+    {
+        $box = Box::findOrFail($boxId); // ✅ NEW - needed for main_category_id
 
-    $grouped = $items->groupBy('subcategory_id');
+        $items = Item::where('box_id', $boxId)
+            ->with('subcategory')
+            ->get();
 
-    $subcategories = $grouped->map(function ($groupItems, $subcategoryId) {
-        $sub = $groupItems->first()->subcategory;
+        $grouped = $items->groupBy('subcategory_id');
 
-        return [
-            'subcategory_id' => $subcategoryId,
-            'subcategory_name' => $sub->name,
-            'stockin' => $groupItems->count(),
-            'stockout' => $groupItems->where('status', 'STOCK_OUT')->count(),
-            'damage' => $groupItems->where('status', 'DAMAGED')->count(),
-            'inuse' => $groupItems->where('status', 'IN_USE')->count(),
-            'current_items' => $groupItems->where('status', 'IN_STOCK')->count(),
-        ];
-    })->values();
+        $subcategories = $grouped->map(function ($groupItems, $subcategoryId) use ($box) {
+            $sub = $groupItems->first()->subcategory;
 
-    return response()->json($subcategories);
-}
+            return [
+                'subcategory_id'   => $subcategoryId,
+                'subcategory_name' => $sub->name,
+                'main_category'    => $this->getCategoryName($box->main_category_id), // ✅ NEW
+                'stockin'          => $groupItems->count(),
+                'stockout'         => $groupItems->where('status', 'STOCK_OUT')->count(),
+                'damage'           => $groupItems->where('status', 'DAMAGED')->count(),
+                'inuse'            => $groupItems->where('status', 'IN_USE')->count(),
+                'current_items'    => $groupItems->where('status', 'IN_STOCK')->count(),
+            ];
+        })->values();
+
+        return response()->json($subcategories);
+    }
 
     /*
     ======================================================

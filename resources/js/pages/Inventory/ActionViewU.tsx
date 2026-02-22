@@ -270,13 +270,15 @@ const ActionViewU: React.FC<ActionViewUProps> = ({ boxId, mainCategoryId, system
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <button
-                  onClick={() => setIsBoxModalOpen(true)}
-                  className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950 whitespace-nowrap text-sm"
-                >
-                  <Plus size={18} />
-                  Add box
-                </button>
+                {system !== 'all' && (
+                  <button
+                    onClick={() => setIsBoxModalOpen(true)}
+                    className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950 whitespace-nowrap text-sm"
+                  >
+                    <Plus size={18} />
+                    Add box
+                  </button>
+                )}
               </div>
             </div>
 

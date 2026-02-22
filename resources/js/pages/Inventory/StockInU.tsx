@@ -6,6 +6,7 @@ import { Search, Plus } from 'lucide-react';
 import { AddStockInModal } from '@/components/modals/AddStockInModal';
 import { MoveModal } from '@/components/modals/MoveModal';
 import SerialBatchViewModal, { SerialBatchEntry } from '@/components/modals/SerialBatchViewModal';
+import { getCategoryColor } from '@/utils/categoryColors';
 
 interface StockInSerialGroup {
   serialNumbers: string[];
@@ -36,6 +37,8 @@ interface StockInDashboardEntry {
     supplierName: string;
   }[];
   batchRemarks: Record<string, string>; // batchTime ISO → remarks
+  mainCategory: string; // ✅ ADD
+
 }
 
 interface StockInProps {
@@ -199,10 +202,16 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
                   <Search className="absolute left-3 top-3 text-gray-400" size={18} />
                   <input type="text" placeholder="Search Stock In Name" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 text-sm" />
                 </div>
-                <button onClick={() => setIsModalOpen(true)} className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950 whitespace-nowrap text-sm">
-                  <Plus size={18} /> Add Stock In
-                </button>
-                <button onClick={() => setIsMoveModalOpen(true)} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full font-medium text-sm whitespace-nowrap">Move</button>
+            {system !== 'shared' && (
+                <>
+                  <button onClick={() => setIsModalOpen(true)} className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950 whitespace-nowrap text-sm">
+                    <Plus size={18} /> Add Stock In
+                  </button>
+                  <button onClick={() => setIsMoveModalOpen(true)} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full font-medium text-sm whitespace-nowrap">
+                    Move
+                  </button>
+                </>
+                )}
               </div>
               <div className="flex gap-3 items-center flex-wrap">
                 <label className="flex items-center gap-2 text-sm"><input type="radio" value="all" checked={filterType === 'all'} onChange={(e) => { setFilterType(e.target.value); setCurrentPage(1); }} className="w-4 h-4" /><span className="text-gray-700 dark:text-gray-300">All</span></label>
@@ -220,29 +229,49 @@ const StockIn: React.FC<StockInProps> = ({ mainCategoryId, system }) => {
                     <tr>
                       <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase"><button onClick={handleSortDate} className="flex items-center justify-center gap-1 w-full hover:text-gray-900 dark:hover:text-white transition-colors text-xs font-bold uppercase">Date <span>{sortDate === 'none' ? '↕' : sortDate === 'asc' ? '↑' : '↓'}</span></button></th>
                       <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase"><button onClick={handleSortItem} className="flex items-center justify-center gap-1 w-full hover:text-gray-900 dark:hover:text-white transition-colors text-xs font-bold uppercase">Item Name <span>{sortItem === 'none' ? '↕' : sortItem === 'asc' ? '↑' : '↓'}</span></button></th>
+                        {/* ✅ NEW */}
+                      {system === 'shared' && (
+                        <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                          Inventory
+                        </th>
+                      )}
                       <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase"><button onClick={handleSortQuantity} className="flex items-center justify-center gap-1 w-full hover:text-gray-900 dark:hover:text-white transition-colors text-xs font-bold uppercase">Quantity <span>{sortQuantity === 'none' ? '↕' : sortQuantity === 'asc' ? '↑' : '↓'}</span></button></th>
                       <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">Serial #</th>
                     </tr>
                   </thead>
                   <tbody>
                     {paginatedEntries.length === 0 ? (
-                      <tr className="h-full"><td colSpan={4} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">No stock in entries found</td></tr>
+                      <tr className="h-full"><td colSpan={system === 'shared' ? 5 : 4} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">No stock in entries found</td></tr>
                     ) : (
                       <>
-                        {paginatedEntries.map((entry) => (
-                          <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700">
-                            <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium text-center">{new Date(entry.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
-                            <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium text-center">{entry.itemName}</td>
-                            <td className="px-4 py-4 text-sm text-center"><span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold text-xs">{entry.totalQuantity}</span></td>
+                      {paginatedEntries.map((entry) => (
+                        <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700">
+                          <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium text-center">
+                            {new Date(entry.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium text-center">{entry.itemName}</td>
+                          {/* ✅ NEW */}
+                          {system === 'shared' && (
                             <td className="px-4 py-4 text-sm text-center">
-                              <button onClick={() => { setSelectedItem(entry); setSerialModalOpen(true); }} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded font-medium transition-colors text-xs">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                View
-                              </button>
+                              <span className={`px-2.5 py-0.5 ${getCategoryColor(entry.mainCategory)} rounded-full font-semibold text-xs`}>
+                                {entry.mainCategory}
+                              </span>
                             </td>
-                          </tr>
-                        ))}
-                        <tr className="h-full"><td colSpan={4} className="border-b border-gray-200 dark:border-gray-700" /></tr>
+                          )}
+                          <td className="px-4 py-4 text-sm text-center">
+                            <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold text-xs">
+                              {entry.totalQuantity}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-center">
+                            <button onClick={() => { setSelectedItem(entry); setSerialModalOpen(true); }} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded font-medium transition-colors text-xs">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                        <tr className="h-full"><td colSpan={system === 'shared' ? 5 : 4} className="border-b border-gray-200 dark:border-gray-700" /></tr>
                       </>
                     )}
                   </tbody>

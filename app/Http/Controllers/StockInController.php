@@ -13,6 +13,27 @@ use Carbon\Carbon;
 
 class StockInController extends Controller
 {
+
+    private function getCategoryIds(int $mainCategoryId): array
+    {
+        if ($mainCategoryId === 5) {
+            return [1, 2, 4];
+        }
+        return [$mainCategoryId];
+    }
+
+    private function getCategoryName(int $mainCategoryId): string
+    {
+        return match($mainCategoryId) {
+            1 => 'Usher',
+            2 => 'Usherette',
+            3 => 'Wehlo',
+            4 => 'Hoclomac',
+            default => 'Unknown',
+        };
+    }
+
+
     /*
     ======================================================
     1️⃣ GET ALL SUPPLIERS
@@ -47,18 +68,17 @@ class StockInController extends Controller
     public function getExistingItems($mainCategoryId)
     {
         try {
-            $items = Subcategory::whereHas('items.box', function ($query) use ($mainCategoryId) {
-                $query->where('main_category_id', $mainCategoryId);
+            $categoryIds = $this->getCategoryIds((int) $mainCategoryId);
+
+            $items = Subcategory::whereHas('items.box', function ($query) use ($categoryIds) {
+                $query->whereIn('main_category_id', $categoryIds); // CHANGED
             })
             ->pluck('name')
             ->toArray();
 
             return response()->json($items);
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to fetch items',
-                'error' => $e->getMessage(),
-            ], 500);
+            return response()->json(['message' => 'Failed to fetch items', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -209,22 +229,25 @@ class StockInController extends Controller
     public function getStockInDashboard($mainCategoryId)
     {
         try {
+            $categoryIds = $this->getCategoryIds((int) $mainCategoryId); // ✅ NEW
+
             $stockInLogs = StockLog::with(['item.subcategory', 'item.box', 'item.supplier'])
                 ->where('action_type', 'STOCK_IN')
-                ->whereHas('item.box', function ($query) use ($mainCategoryId) {
-                    $query->where('main_category_id', $mainCategoryId);
+                ->whereHas('item.box', function ($query) use ($categoryIds) {
+                    $query->whereIn('main_category_id', $categoryIds); // ✅ CHANGED
                 })
                 ->get();
 
             $grouped = $stockInLogs->groupBy(function ($log) {
                 $date = $log->created_at ? $log->created_at->format('Y-m-d') : now()->format('Y-m-d');
-                return $log->item->subcategory->name . '|' . $date;
+                // ✅ ADDED main_category_id to group key
+                return $log->item->subcategory->name . '|' . $date . '|' . $log->item->box->main_category_id;
             });
 
             $dashboard = [];
 
             foreach ($grouped as $key => $logs) {
-                [$itemName, $date] = explode('|', $key);
+                [$itemName, $date, $catId] = explode('|', $key); // ✅ UPDATED
 
                 $serialGroups = [];
                 $bySupplier = $logs->groupBy(fn($log) => $log->item->supplier_id);
@@ -233,25 +256,25 @@ class StockInController extends Controller
                     $supplier = $supplierLogs->first()->item->supplier;
                     $serialGroups[] = [
                         'serialNumbers' => $supplierLogs->map(fn($log) => [
-                            'serial' => $log->item->serial_number,
-                            'boxName' => $log->item->box->name,
-                            'batchTime'  => $log->created_at->toIso8601String(),
+                            'serial'    => $log->item->serial_number,
+                            'boxName'   => $log->item->box->name,
+                            'batchTime' => $log->created_at->toIso8601String(),
                         ])->toArray(),
-                        'supplierId' => (string) $supplierId,
+                        'supplierId'   => (string) $supplierId,
                         'supplierName' => $supplier ? $supplier->name : 'Unknown',
                     ];
                 }
 
                 $batchRemarks = [];
                 foreach ($logs as $log) {
-                    $batchKey = $log->created_at->toIso8601String(); // ← renamed to $batchKey
+                    $batchKey = $log->created_at->toIso8601String();
                     if (!isset($batchRemarks[$batchKey])) {
                         $batchRemarks[$batchKey] = $log->remarks ?? '';
                     }
                 }
 
                 $dashboard[] = [
-                    'id'            => 'entry-' . md5($key), // ← $key still = "ESP32|2026-02-21" ✅
+                    'id'            => 'entry-' . md5($key),
                     'boxName'       => '',
                     'itemName'      => $itemName,
                     'date'          => $date,
@@ -259,14 +282,13 @@ class StockInController extends Controller
                     'serialGroups'  => $serialGroups,
                     'remarks'       => $logs->first()->remarks ?? '',
                     'batchRemarks'  => $batchRemarks,
+                    'mainCategory'  => $this->getCategoryName((int) $catId), // ✅ NEW
                 ];
             }
+
             return response()->json($dashboard);
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to fetch dashboard',
-                'error' => $e->getMessage(),
-            ], 500);
+            return response()->json(['message' => 'Failed to fetch dashboard', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -479,22 +501,24 @@ class StockInController extends Controller
     public function getStockOutDashboard($mainCategoryId)
     {
         try {
+            $categoryIds = $this->getCategoryIds((int) $mainCategoryId);
+
             $stockOutLogs = StockLog::with(['item.subcategory', 'item.box', 'item.supplier'])
                 ->where('action_type', 'STOCK_OUT')
-                ->whereHas('item.box', function ($query) use ($mainCategoryId) {
-                    $query->where('main_category_id', $mainCategoryId);
+                ->whereHas('item.box', function ($query) use ($categoryIds) {
+                    $query->whereIn('main_category_id', $categoryIds);
                 })
                 ->get();
 
             $grouped = $stockOutLogs->groupBy(function ($log) {
                 $date = $log->created_at ? $log->created_at->format('Y-m-d') : now()->format('Y-m-d');
-                return $log->item->subcategory->name . '|' . $date;
+                return $log->item->subcategory->name . '|' . $date . '|' . $log->item->box->main_category_id;
             });
 
             $dashboard = [];
 
             foreach ($grouped as $key => $logs) {
-                [$itemName, $date] = explode('|', $key);
+                [$itemName, $date, $catId] = explode('|', $key);
 
                 $serialGroups = [];
                 $bySupplier = $logs->groupBy(fn($log) => $log->item->supplier_id);
@@ -503,42 +527,39 @@ class StockInController extends Controller
                     $supplier = $supplierLogs->first()->item->supplier;
                     $serialGroups[] = [
                         'serialNumbers' => $supplierLogs->map(fn($log) => [
-                            'serial' => $log->item->serial_number,
-                            'boxName' => $log->item->box->name,
+                            'serial'    => $log->item->serial_number,
+                            'boxName'   => $log->item->box->name,
                             'batchTime' => $log->created_at->toIso8601String(),
                         ])->toArray(),
-                        'supplierId' => (string) $supplierId,
+                        'supplierId'   => (string) $supplierId,
                         'supplierName' => $supplier ? $supplier->name : 'Unknown',
                     ];
                 }
 
                 $batchRemarks = [];
                 foreach ($logs as $log) {
-                    $batchKey = $log->created_at->toIso8601String(); // ← renamed to $batchKey
+                    $batchKey = $log->created_at->toIso8601String();
                     if (!isset($batchRemarks[$batchKey])) {
                         $batchRemarks[$batchKey] = $log->remarks ?? '';
                     }
                 }
 
                 $dashboard[] = [
-                    'id' => 'entry-' . md5($key),
-                    'boxName' => '', // no longer a single box
-                    'itemName' => $itemName,
-                    'date' => $date,
+                    'id'            => 'entry-' . md5($key),
+                    'boxName'       => '',
+                    'itemName'      => $itemName,
+                    'date'          => $date,
                     'totalQuantity' => $logs->count(),
-                    'serialGroups' => $serialGroups,
-                    'remarks' => $logs->first()->remarks ?? '',
-                    'batchRemarks'  => $batchRemarks,  // ← ADD THIS LINE
-
+                    'serialGroups'  => $serialGroups,
+                    'remarks'       => $logs->first()->remarks ?? '',
+                    'batchRemarks'  => $batchRemarks,
+                    'mainCategory'  => $this->getCategoryName((int) $catId), // ✅ NEW
                 ];
             }
 
             return response()->json($dashboard);
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to fetch stock out dashboard',
-                'error' => $e->getMessage(),
-            ], 500);
+            return response()->json(['message' => 'Failed to fetch stock out dashboard', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -575,71 +596,70 @@ class StockInController extends Controller
     GET IN-USE DASHBOARD DATA
     ======================================================
     */
-    public function getInUseDashboard($mainCategoryId)
-    {
-        try {
-            $inUseLogs = StockLog::with(['item.subcategory', 'item.box', 'item.supplier'])
-                ->where('action_type', 'IN_USE')
-                ->whereHas('item.box', function ($query) use ($mainCategoryId) {
-                    $query->where('main_category_id', $mainCategoryId);
-                })
-                ->get();
+public function getInUseDashboard($mainCategoryId)
+{
+    try {
+        $categoryIds = $this->getCategoryIds((int) $mainCategoryId);
 
-            $grouped = $inUseLogs->groupBy(function ($log) {
-                $date = $log->created_at ? $log->created_at->format('Y-m-d') : now()->format('Y-m-d');
-                return $log->item->subcategory->name . '|' . $date;
-            });
+        $inUseLogs = StockLog::with(['item.subcategory', 'item.box', 'item.supplier'])
+            ->where('action_type', 'IN_USE')
+            ->whereHas('item.box', function ($query) use ($categoryIds) {
+                $query->whereIn('main_category_id', $categoryIds);
+            })
+            ->get();
 
-            $dashboard = [];
+        $grouped = $inUseLogs->groupBy(function ($log) {
+            $date = $log->created_at ? $log->created_at->format('Y-m-d') : now()->format('Y-m-d');
+            return $log->item->subcategory->name . '|' . $date . '|' . $log->item->box->main_category_id;
+        });
 
-            foreach ($grouped as $key => $logs) {
-                [$itemName, $date] = explode('|', $key);
+        $dashboard = [];
 
-                $serialGroups = [];
-                $bySupplier = $logs->groupBy(fn($log) => $log->item->supplier_id);
+        foreach ($grouped as $key => $logs) {
+            [$itemName, $date, $catId] = explode('|', $key);
 
-                foreach ($bySupplier as $supplierId => $supplierLogs) {
-                    $supplier = $supplierLogs->first()->item->supplier;
-                    $serialGroups[] = [
-                        'serialNumbers' => $supplierLogs->map(fn($log) => [
-                            'serial'    => $log->item->serial_number,
-                            'boxName'   => $log->item->box->name,
-                            'batchTime' => $log->created_at->toIso8601String(),
-                        ])->toArray(),
-                        'supplierId'   => (string) $supplierId,
-                        'supplierName' => $supplier ? $supplier->name : 'Unknown',
-                    ];
-                }
+            $serialGroups = [];
+            $bySupplier = $logs->groupBy(fn($log) => $log->item->supplier_id);
 
-                $batchRemarks = [];
-                foreach ($logs as $log) {
-                    $batchKey = $log->created_at->toIso8601String(); // ← renamed to $batchKey
-                    if (!isset($batchRemarks[$batchKey])) {
-                        $batchRemarks[$batchKey] = $log->remarks ?? '';
-                    }
-                }
-
-                $dashboard[] = [
-                    'id' => 'entry-' . md5($key),
-                    'boxName' => '', // no longer a single box
-                    'itemName' => $itemName,
-                    'date' => $date,
-                    'totalQuantity' => $logs->count(),
-                    'serialGroups' => $serialGroups,
-                    'remarks' => $logs->first()->remarks ?? '',
-                    'batchRemarks'  => $batchRemarks,  // ← ADD THIS LINE
-
+            foreach ($bySupplier as $supplierId => $supplierLogs) {
+                $supplier = $supplierLogs->first()->item->supplier;
+                $serialGroups[] = [
+                    'serialNumbers' => $supplierLogs->map(fn($log) => [
+                        'serial'    => $log->item->serial_number,
+                        'boxName'   => $log->item->box->name,
+                        'batchTime' => $log->created_at->toIso8601String(),
+                    ])->toArray(),
+                    'supplierId'   => (string) $supplierId,
+                    'supplierName' => $supplier ? $supplier->name : 'Unknown',
                 ];
             }
 
-            return response()->json($dashboard);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to fetch in-use dashboard',
-                'error'   => $e->getMessage(),
-            ], 500);
+            $batchRemarks = [];
+            foreach ($logs as $log) {
+                $batchKey = $log->created_at->toIso8601String();
+                if (!isset($batchRemarks[$batchKey])) {
+                    $batchRemarks[$batchKey] = $log->remarks ?? '';
+                }
+            }
+
+            $dashboard[] = [
+                'id'            => 'entry-' . md5($key),
+                'boxName'       => '',
+                'itemName'      => $itemName,
+                'date'          => $date,
+                'totalQuantity' => $logs->count(),
+                'serialGroups'  => $serialGroups,
+                'remarks'       => $logs->first()->remarks ?? '',
+                'batchRemarks'  => $batchRemarks,
+                'mainCategory'  => $this->getCategoryName((int) $catId), // ✅ NEW
+            ];
         }
+
+        return response()->json($dashboard);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Failed to fetch in-use dashboard', 'error' => $e->getMessage()], 500);
     }
+}
 
     /*
     ======================================================
@@ -689,74 +709,73 @@ class StockInController extends Controller
     GET STOCK DAMAGE DASHBOARD DATA
     ======================================================
     */
-    public function getStockDamageDashboard($mainCategoryId)
-    {
-        try {
-            $damageLogs = StockLog::with(['item.subcategory', 'item.box', 'item.supplier'])
-                ->where('action_type', 'DAMAGED')
-                ->whereHas('item.box', function ($query) use ($mainCategoryId) {
-                    $query->where('main_category_id', $mainCategoryId);
-                })
-                ->whereHas('item', function ($query) {
-                    $query->where('status', 'DAMAGED');
-                })
-                ->get();
+public function getStockDamageDashboard($mainCategoryId)
+{
+    try {
+        $categoryIds = $this->getCategoryIds((int) $mainCategoryId);
 
-            $grouped = $damageLogs->groupBy(function ($log) {
-                $date = $log->created_at ? $log->created_at->format('Y-m-d') : now()->format('Y-m-d');
-                return $log->item->subcategory->name . '|' . $date;
-            });
+        $damageLogs = StockLog::with(['item.subcategory', 'item.box', 'item.supplier'])
+            ->where('action_type', 'DAMAGED')
+            ->whereHas('item.box', function ($query) use ($categoryIds) {
+                $query->whereIn('main_category_id', $categoryIds);
+            })
+            ->whereHas('item', function ($query) {
+                $query->where('status', 'DAMAGED');
+            })
+            ->get();
 
-            $dashboard = [];
+        $grouped = $damageLogs->groupBy(function ($log) {
+            $date = $log->created_at ? $log->created_at->format('Y-m-d') : now()->format('Y-m-d');
+            return $log->item->subcategory->name . '|' . $date . '|' . $log->item->box->main_category_id;
+        });
 
-            foreach ($grouped as $key => $logs) {
-                [$itemName, $date] = explode('|', $key);
+        $dashboard = [];
 
-                $serialGroups = [];
-                $bySupplier = $logs->groupBy(fn($log) => $log->item->supplier_id);
+        foreach ($grouped as $key => $logs) {
+            [$itemName, $date, $catId] = explode('|', $key);
 
-                foreach ($bySupplier as $supplierId => $supplierLogs) {
-                    $supplier = $supplierLogs->first()->item->supplier;
-                    $serialGroups[] = [
-                        'serialNumbers' => $supplierLogs->map(fn($log) => [
-                            'serial'    => $log->item->serial_number,
-                            'boxName'   => $log->item->box->name,
-                            'batchTime' => $log->created_at->toIso8601String(),
-                        ])->toArray(),
-                        'supplierId'   => (string) $supplierId,
-                        'supplierName' => $supplier ? $supplier->name : 'Unknown',
-                    ];
-                }
+            $serialGroups = [];
+            $bySupplier = $logs->groupBy(fn($log) => $log->item->supplier_id);
 
-                $batchRemarks = [];
-                foreach ($logs as $log) {
-                    $batchKey = $log->created_at->toIso8601String(); // ← renamed to $batchKey
-                    if (!isset($batchRemarks[$batchKey])) {
-                        $batchRemarks[$batchKey] = $log->remarks ?? '';
-                    }
-                }
-
-                $dashboard[] = [
-                    'id' => 'entry-' . md5($key),
-                    'boxName' => '', // no longer a single box
-                    'itemName' => $itemName,
-                    'date' => $date,
-                    'totalQuantity' => $logs->count(),
-                    'serialGroups' => $serialGroups,
-                    'remarks' => $logs->first()->remarks ?? '',
-                    'batchRemarks'  => $batchRemarks,  // ← ADD THIS LINE
-
+            foreach ($bySupplier as $supplierId => $supplierLogs) {
+                $supplier = $supplierLogs->first()->item->supplier;
+                $serialGroups[] = [
+                    'serialNumbers' => $supplierLogs->map(fn($log) => [
+                        'serial'    => $log->item->serial_number,
+                        'boxName'   => $log->item->box->name,
+                        'batchTime' => $log->created_at->toIso8601String(),
+                    ])->toArray(),
+                    'supplierId'   => (string) $supplierId,
+                    'supplierName' => $supplier ? $supplier->name : 'Unknown',
                 ];
             }
 
-            return response()->json($dashboard);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to fetch stock damage dashboard',
-                'error'   => $e->getMessage(),
-            ], 500);
+            $batchRemarks = [];
+            foreach ($logs as $log) {
+                $batchKey = $log->created_at->toIso8601String();
+                if (!isset($batchRemarks[$batchKey])) {
+                    $batchRemarks[$batchKey] = $log->remarks ?? '';
+                }
+            }
+
+            $dashboard[] = [
+                'id'            => 'entry-' . md5($key),
+                'boxName'       => '',
+                'itemName'      => $itemName,
+                'date'          => $date,
+                'totalQuantity' => $logs->count(),
+                'serialGroups'  => $serialGroups,
+                'remarks'       => $logs->first()->remarks ?? '',
+                'batchRemarks'  => $batchRemarks,
+                'mainCategory'  => $this->getCategoryName((int) $catId), // ✅ NEW
+            ];
         }
+
+        return response()->json($dashboard);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Failed to fetch stock damage dashboard', 'error' => $e->getMessage()], 500);
     }
+}
 
     /*
     ======================================================

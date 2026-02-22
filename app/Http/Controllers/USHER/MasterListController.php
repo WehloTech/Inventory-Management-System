@@ -17,7 +17,7 @@ class MasterListController extends Controller
             'usherette' => 2,
             'wehlo' => 3,
             'hoclomac' => 4,
-            'all' => 5,
+            'shared' => 5,
         ];
         
         return $categoryMap[$system] ?? 1;

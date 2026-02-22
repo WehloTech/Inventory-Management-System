@@ -7,11 +7,14 @@ import {
 } from '@/components/ui/sidebar';
 import { Search, Plus, X, Eye, Trash2 } from 'lucide-react';
 import { AddBoxModal } from '@/components/modals/AddBoxModal';
+import { getCategoryColor } from '@/utils/categoryColors';
+
 
 interface InventoryBox {
   id: number;
   box_name: string;
   category_quantity: number;
+  main_category: string;
 }
 
 interface Props {
@@ -213,13 +216,15 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <button
-                  onClick={() => setIsBoxModalOpen(true)}
-                  className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950 whitespace-nowrap text-sm"
-                >
-                  <Plus size={18} />
-                  Add Box
-                </button>
+                {system !== 'shared' && (
+                  <button
+                    onClick={() => setIsBoxModalOpen(true)}
+                    className="px-6 py-2 rounded-full font-medium transition-colors flex items-center gap-2 bg-blue-900 text-white border border-blue-900 hover:bg-blue-800 active:bg-blue-950 whitespace-nowrap text-sm"
+                  >
+                    <Plus size={18} />
+                    Add Box
+                  </button>
+                )}
               </div>
             </div>
 
@@ -227,34 +232,36 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
             <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col">
               <div className="flex-1 overflow-hidden" ref={tableContainerRef}>
                 <table className="w-full h-full table-fixed">
-                  <thead className="bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                    <tr>
+                <thead className="bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                  <tr>
+                    <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                      Box Name
+                    </th>
+                    <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                      Item Category Quantity
+                    </th>
+                    {/* ✅ NEW */}
+                    {system === 'shared' && (
                       <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
-                        Box Name
+                        Inventory
                       </th>
-                      <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
-                        Category Quantity
-                      </th>
-                      <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-
+                    )}
+                    <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
                   <tbody>
                     {paginatedBoxes.length === 0 ? (
                       <tr className="h-full">
-                        <td colSpan={3} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan={system === 'shared' ? 4 : 3} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
                           No boxes found. Create one to get started!
                         </td>
                       </tr>
                     ) : (
                       <>
                         {paginatedBoxes.map((box) => (
-                          <tr
-                            key={box.id}
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
-                          >
+                          <tr key={box.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700">
                             <td className="px-4 py-4 text-center text-gray-900 dark:text-white font-medium text-sm">
                               {box.box_name}
                             </td>
@@ -263,6 +270,14 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
                                 {box.category_quantity}
                               </span>
                             </td>
+                            {/* ✅ NEW */}
+                            {system === 'shared' && (
+                              <td className="px-4 py-4 text-center text-sm">
+                                <span className={`px-2.5 py-0.5 ${getCategoryColor(box.main_category)} rounded-full font-semibold text-xs`}>
+                                  {box.main_category}
+                                </span>
+                              </td>
+                            )}
                             <td className="px-4 py-4 text-center">
                               <div className="flex items-center justify-center gap-2">
                                 <button
@@ -273,21 +288,23 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
                                   <Eye size={14} />
                                   View
                                 </button>
-                                <button
-                                  onClick={() => handleDeleteBox(box.id)}
-                                  className="inline-flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white rounded font-medium transition-colors text-xs"
-                                  title="Delete"
-                                >
-                                  <Trash2 size={14} />
-                                  Delete
-                                </button>
+                                {system !== 'shared' && (
+                                  <button
+                                    onClick={() => handleDeleteBox(box.id)}
+                                    className="inline-flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white rounded font-medium transition-colors text-xs"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={14} />
+                                    Delete
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
                         ))}
                         {/* Filler row that stretches to fill remaining space */}
                         <tr className="h-full">
-                          <td colSpan={3} className="border-b border-gray-200 dark:border-gray-700" />
+                          <td colSpan={system === 'shared' ? 4 : 3} className="border-b border-gray-200 dark:border-gray-700" />
                         </tr>
                       </>
                     )}

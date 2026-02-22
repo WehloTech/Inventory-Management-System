@@ -4,6 +4,7 @@ import { USHERSidebar } from '@/components/sidebar/usher-sidebar';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Search, ArrowLeft } from 'lucide-react';
 import SerialBatchViewModal, { SerialBatchEntry } from '@/components/modals/SerialBatchViewModal';
+import { getCategoryColor } from '@/utils/categoryColors';
 
 interface SerialNumberGroup {
   serialNumbers: { serial: string; boxName: string; batchTime: string }[];
@@ -20,7 +21,7 @@ interface StockDamageDashboardEntry {
   serialGroups: SerialNumberGroup[];
   remarks: string;
   batchRemarks: Record<string, string>;  // ADD THIS
-
+  mainCategory: string; // ✅ ADD
 }
 
 interface StockDamageProps {
@@ -299,6 +300,12 @@ const StockDamage: React.FC<StockDamageProps> = ({ mainCategoryId, system }) => 
                           Item Name <span>{sortItem === 'none' ? '↕' : sortItem === 'asc' ? '↑' : '↓'}</span>
                         </button>
                       </th>
+                        {/* ✅ NEW */}
+                      {system === 'shared' && (
+                        <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                          Inventory
+                        </th>
+                      )}
                       <th className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
                         <button onClick={handleSortQuantity} className="flex items-center justify-center gap-1 w-full hover:text-gray-900 dark:hover:text-white transition-colors text-xs font-bold uppercase">
                           Quantity <span>{sortQuantity === 'none' ? '↕' : sortQuantity === 'asc' ? '↑' : '↓'}</span>
@@ -311,42 +318,34 @@ const StockDamage: React.FC<StockDamageProps> = ({ mainCategoryId, system }) => 
                   <tbody>
                     {paginatedEntries.length === 0 ? (
                       <tr className="h-full">
-                        <td colSpan={4} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan={system === 'shared' ? 5 : 4} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
                           No damaged entries found
                         </td>
                       </tr>
                     ) : (
                       <>
                         {paginatedEntries.map((entry) => (
-                          <tr
-                            key={entry.id}
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
-                          >
+                          <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700">
                             <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium text-center">
-                              {new Date(entry.date).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                              })}
+                              {new Date(entry.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                             </td>
                             <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium text-center">{entry.itemName}</td>
+                            {/* ✅ NEW */}
+                            {system === 'shared' && (
+                              <td className="px-4 py-4 text-sm text-center">
+                                <span className={`px-2.5 py-0.5 ${getCategoryColor(entry.mainCategory)} rounded-full font-semibold text-xs`}>
+                                  {entry.mainCategory}
+                                </span>
+                              </td>
+                            )}
                             <td className="px-4 py-4 text-sm text-center">
-                              <span className="px-2.5 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full font-semibold text-xs">
+                              <span className="px-2.5 py-0.5  bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold text-xs">
                                 {entry.totalQuantity}
                               </span>
                             </td>
                             <td className="px-4 py-4 text-sm text-center">
-                              <button
-                                onClick={() => {
-                                  setSelectedItem(entry);
-                                  setSerialModalOpen(true);
-                                }}
-                                className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded font-medium transition-colors text-xs"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                                  <circle cx="12" cy="12" r="3"/>
-                                </svg>
+                              <button onClick={() => { setSelectedItem(entry); setSerialModalOpen(true); }} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded font-medium transition-colors text-xs">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                 View
                               </button>
                             </td>
@@ -354,7 +353,7 @@ const StockDamage: React.FC<StockDamageProps> = ({ mainCategoryId, system }) => 
                         ))}
                         {/* Filler row that stretches to fill remaining space */}
                         <tr className="h-full">
-                          <td colSpan={4} className="border-b border-gray-200 dark:border-gray-700" />
+                          <td colSpan={system === 'shared' ? 5 : 4} className="border-b border-gray-200 dark:border-gray-700" />
                         </tr>
                       </>
                     )}
