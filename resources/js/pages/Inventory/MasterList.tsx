@@ -5,7 +5,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Search, Plus, X, Eye, Trash2 } from 'lucide-react';
+import { Search, Plus, X, Eye, Trash2, AlertCircle} from 'lucide-react';
 import { AddBoxModal } from '@/components/modals/AddBoxModal';
 import { getCategoryColor } from '@/utils/categoryColors';
 
@@ -360,53 +360,68 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
           onSuccess={handleBoxAdded}
         />
 
-        {/* Delete Confirmation Modal */}
+{/* Delete Confirmation Modal */}
         {isDeleteModalOpen && boxToDelete && (
-          <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-lg">
-              <div className="p-6 sm:p-8 border-b-2 border-gray-900 dark:border-gray-100">
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                  {boxToDelete.box_name}
-                </h2>
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-300">
+              
+              {/* Header */}
+              <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">
+                    Delete Box
+                  </h2>
+                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-[0.2em] mt-1">
+                    Destructive Action
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center text-red-600 dark:text-red-400">
+                  <Trash2 size={24} strokeWidth={2.5} />
+                </div>
               </div>
 
-              <div className="p-6 sm:p-8 space-y-6">
-                <div className="bg-red-100 dark:bg-red-900/30 border-2 border-red-500 dark:border-red-600 rounded-3xl p-6">
-                  <p className="text-red-700 dark:text-red-200 font-bold text-lg">
-                    Deleting this box will permanently remove all associated sub-categories, items, and related information.
+              {/* Body */}
+              <div className="p-8 space-y-6">
+                <div className="bg-red-500/10 border-2 border-red-500/20 rounded-3xl p-6">
+                  <p className="text-red-600 dark:text-red-400 font-black uppercase text-xs tracking-widest mb-2 flex items-center gap-2">
+                    <AlertCircle size={14} /> Critical Warning
                   </p>
-                  <p className="text-red-700 dark:text-red-200 font-bold mt-3">
+                  <p className="text-slate-900 dark:text-slate-200 font-bold text-base leading-relaxed">
+                    Deleting <span className="underline decoration-red-500 decoration-2 underline-offset-4">{boxToDelete.box_name}</span> will permanently remove all associated sub-categories, items, and related information.
+                  </p>
+                  <p className="text-red-600 dark:text-red-400 font-black italic mt-4 text-sm">
                     This action cannot be undone.
                   </p>
                 </div>
 
-                <div>
-                  <p className="text-gray-700 dark:text-gray-300 font-semibold mb-4">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] ml-1">
                     To continue, type to confirm
-                  </p>
+                  </label>
                   <input
                     type="text"
-                    placeholder="Enter box name to confirm"
+                    placeholder={`Type "${boxToDelete.box_name}" to confirm`}
                     value={deleteConfirmationInput}
                     onChange={(e) => setDeleteConfirmationInput(e.target.value.toUpperCase())}
-                    className="w-full px-4 py-3 border-2 border-gray-400 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 transition-colors font-medium text-sm"
+                    className="w-full px-6 py-4 border-2 border-slate-200 dark:border-slate-700 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-black text-lg placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:outline-none focus:border-red-500 transition-all"
                   />
                 </div>
               </div>
 
-              <div className="flex gap-3 justify-center p-6 sm:p-8 border-t-2 border-gray-900 dark:border-gray-100 flex-col sm:flex-row">
+              {/* Footer */}
+              <div className="p-8 bg-slate-50 dark:bg-slate-800/50 flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={closeDeleteModal}
+                  className="flex-1 px-8 py-4 border-2 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white dark:hover:bg-slate-700 transition-all"
+                >
+                  Cancel
+                </button>
                 <button
                   onClick={handleConfirmDelete}
                   disabled={deleteConfirmationInput !== boxToDelete.box_name}
-                  className="px-8 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-300 dark:disabled:bg-red-900/50 text-white rounded-full font-bold transition-colors text-sm sm:text-base disabled:cursor-not-allowed"
+                  className="flex-[1.5] px-8 py-4 bg-red-600 hover:bg-red-700 disabled:bg-red-300 dark:disabled:bg-red-900/30 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-red-500/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:shadow-none"
                 >
-                  Delete
-                </button>
-                <button
-                  onClick={closeDeleteModal}
-                  className="px-8 py-3 border-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white rounded-full font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base"
-                >
-                  Cancel
+                  Confirm Delete
                 </button>
               </div>
             </div>

@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Box as BoxIcon, AlertCircle } from 'lucide-react';
 
 interface InventoryBox {
   id: number;
   box_name: string;
   category_quantity: number;
-  main_category: string; // required — matches MasterList.tsx
-
+  main_category: string;
 }
 
 interface AddBoxModalProps {
@@ -32,16 +31,19 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
   const systemDisplayName = system.toUpperCase();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setBoxFormData((prev) => ({ ...prev, [name]: value.toUpperCase() }));
-    if (showBoxError) { setShowBoxError(false); setBoxError(''); }
+    const { value } = e.target;
+    setBoxFormData({ boxNumber: value.toUpperCase() });
+    if (showBoxError) {
+      setShowBoxError(false);
+      setBoxError('');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!boxFormData.boxNumber.trim()) {
-      setBoxError('Please enter a box name');
+      setBoxError('Box name cannot be empty');
       setShowBoxError(true);
       return;
     }
@@ -68,18 +70,15 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
           category_quantity: 0,
           main_category: systemDisplayName,
         };
-        setBoxFormData({ boxNumber: '' });
-        setBoxError('');
-        setShowBoxError(false);
+        handleClose();
         if (onSuccess) onSuccess(formattedBox);
-        onClose();
       } else {
         setBoxError(result.message || 'Failed to create box');
         setShowBoxError(true);
       }
     } catch (error) {
       console.error('Error creating box:', error);
-      setBoxError('Failed to create box. Please try again.');
+      setBoxError('Network error. Please try again.');
       setShowBoxError(true);
     } finally {
       setIsSubmitting(false);
@@ -96,73 +95,84 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 backdrop-blur-sm bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md flex flex-col">
-
+    <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-md flex flex-col border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-300 overflow-hidden">
+        
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Add Box</h2>
+        <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none italic">
+              New Box
+            </h2>
+
+          </div>
           <button
             onClick={handleClose}
             disabled={isSubmitting}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
+            className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-red-500 rounded-full transition-all active:scale-90 disabled:opacity-50"
           >
-            <X size={22} />
+            <X size={20} strokeWidth={3} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 space-y-4">
-
-          {/* Error */}
+        <form onSubmit={handleSubmit} className="px-8 py-8 space-y-6">
+          
+          {/* Error Message */}
           {showBoxError && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-xl px-4 py-3">
-              <p className="text-red-600 dark:text-red-400 text-sm font-medium">{boxError}</p>
+            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 flex items-center gap-3 animate-in slide-in-from-top-2">
+              <AlertCircle className="text-red-500 shrink-0" size={18} />
+              <p className="text-red-600 dark:text-red-400 text-xs font-black uppercase tracking-tight">{boxError}</p>
             </div>
           )}
 
-          {/* Main Category (read-only) */}
-          <div className="space-y-1.5">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+          {/* Read-only Category Info */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
               Main Category
             </label>
-            <div className="w-full px-4 py-2.5 rounded-full border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm font-medium">
+            <div className="w-full px-6 py-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 text-slate-500 dark:text-slate-400 text-sm font-black italic tracking-tight">
               {systemDisplayName}
             </div>
           </div>
 
-          {/* Box Name */}
-          <div className="space-y-1.5">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Box Name
+          {/* Box Name Input */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+              <BoxIcon size={12} /> Box Name
             </label>
             <input
               type="text"
               name="boxNumber"
+              autoFocus
               value={boxFormData.boxNumber}
               onChange={handleInputChange}
-              placeholder="Enter box name"
+              placeholder="Enter box name..."
               disabled={isSubmitting}
-              className="w-full px-4 py-2.5 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className={`w-full px-6 py-4 rounded-2xl border-2 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-black text-lg placeholder:text-slate-300 focus:outline-none transition-all ${
+                showBoxError 
+                  ? 'border-red-500 focus:ring-red-500/20' 
+                  : 'border-slate-100 dark:border-slate-800 focus:border-blue-500'
+              } disabled:opacity-50`}
             />
           </div>
-        </div>
+        </form>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={handleClose}
-            disabled={isSubmitting}
-            className="px-5 py-2 rounded-full text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-          >
-            Cancel
-          </button>
+        <div className="px-8 py-6 bg-slate-50 dark:bg-slate-800/50 flex flex-col gap-3">
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="px-5 py-2 rounded-full text-sm font-medium bg-blue-900 hover:bg-blue-800 active:bg-blue-950 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[1.5rem] font-black transition-all flex items-center justify-center shadow-xl active:scale-[0.98] uppercase tracking-[0.2em] text-xs disabled:opacity-50"
           >
-            {isSubmitting ? 'Adding...' : 'Add Box'}
+            {isSubmitting ? 'Adding Box...' : 'Add Box'}
+          </button>
+          <button
+            onClick={handleClose}
+            disabled={isSubmitting}
+            className="w-full text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors disabled:opacity-50"
+          >
+            Cancel 
           </button>
         </div>
 
