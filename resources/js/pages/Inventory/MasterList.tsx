@@ -5,18 +5,17 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Search, Plus, X, Eye, Trash2, AlertCircle} from 'lucide-react';
+import { Search, Plus, Eye, Trash2, AlertCircle, ChevronDown } from 'lucide-react';
 import { AddBoxModal } from '@/components/modals/AddBoxModal';
 import { getCategoryColor } from '@/utils/categoryColors';
 import { PasscodeGate } from '@/components/modals/PasscodeGate';
-
 
 interface InventoryBox {
   id: number;
   box_name: string;
   category_quantity: number;
   main_category: string;
-  item_names?: string[]; // ← optional, new boxes start with no items
+  item_names?: string[];
 }
 
 interface Props {
@@ -28,6 +27,117 @@ interface MasterListPageComponent extends React.FC<Props> {
   layout?: any;
 }
 
+// ─── Row with hover popover on quantity cell ──────────────────────────────────
+const BoxRow: React.FC<{
+  box: InventoryBox;
+  system: string;
+  onView: () => void;
+  onDelete: () => void;
+}> = ({ box, system, onView, onDelete }) => {
+  const [hovered, setHovered] = useState(false);
+  const [pos, setPos] = useState<'bottom' | 'top'>('bottom');
+  const qtyRef = useRef<HTMLTableCellElement>(null);
+
+  const hasItems = box.item_names && box.item_names.length > 0;
+
+  const handleRowEnter = () => {
+    if (!hasItems) return;
+    if (qtyRef.current) {
+      const rect = qtyRef.current.getBoundingClientRect();
+      setPos(window.innerHeight - rect.bottom < 220 ? 'top' : 'bottom');
+    }
+    setHovered(true);
+  };
+
+  return (
+    <tr
+      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
+      onMouseEnter={handleRowEnter}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Quantity — popover anchor */}
+      <td ref={qtyRef} className="px-4 py-4 text-center text-sm relative">
+        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold text-xs cursor-default ${hasItems ? 'cursor-default' : ''}`}>
+          {box.category_quantity}
+          {hasItems && (
+            <ChevronDown
+              size={10}
+              className={`transition-transform duration-150 ${hovered ? 'rotate-180' : ''}`}
+            />
+          )}
+        </span>
+
+        {/* Popover */}
+        {hovered && hasItems && (
+          <div
+            className={`absolute left-1/2 -translate-x-1/2 z-50 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-xl shadow-2xl overflow-hidden ${
+              pos === 'bottom' ? 'top-full mt-1' : 'bottom-full mb-1'
+            }`}
+          >
+            {/* Header */}
+            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Items in {box.box_name}
+              </span>
+              <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full">
+                {box.item_names!.length}
+              </span>
+            </div>
+            {/* List */}
+            <ul className="max-h-48 overflow-y-auto py-1">
+              {box.item_names!.map((name, idx) => (
+                <li
+                  key={idx}
+                  className="px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-left"
+                >
+                  {name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </td>
+
+      {/* Box Name */}
+      <td className="px-4 py-4 text-center text-gray-900 dark:text-white font-medium text-sm">
+        {box.box_name}
+      </td>
+
+      {/* Inventory badge (shared only) */}
+      {system === 'shared' && (
+        <td className="px-4 py-4 text-center text-sm">
+          <span className={`px-2.5 py-0.5 ${getCategoryColor(box.main_category)} rounded-full font-semibold text-xs`}>
+            {box.main_category}
+          </span>
+        </td>
+      )}
+
+      {/* Actions */}
+      <td className="px-4 py-4 text-center">
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={onView}
+            className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded font-medium transition-colors text-xs"
+          >
+            <Eye size={14} />
+            View
+          </button>
+          {system !== 'shared' && (
+            <button
+              onClick={onDelete}
+              className="inline-flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white rounded font-medium transition-colors text-xs"
+            >
+              <Trash2 size={14} />
+              Delete
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isBoxModalOpen, setIsBoxModalOpen] = useState(false);
@@ -44,79 +154,57 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
   const [inventoryBoxes, setInventoryBoxes] = useState<InventoryBox[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [boxFormData, setBoxFormData] = useState({
-    boxNumber: '',
-  });
-
-  const [boxError, setBoxError] = useState('');
-  const [showBoxError, setShowBoxError] = useState(false);
-  // Add these two new states
   const [showPasscodeForDelete, setShowPasscodeForDelete] = useState(false);
-  const [pendingDeleteBox, setPendingDeleteBox] = useState<InventoryBox | null>(null)
+  const [pendingDeleteBox, setPendingDeleteBox] = useState<InventoryBox | null>(null);
+
   const systemDisplayName = system.toUpperCase();
 
-  // Dynamic items per page based on container height
   useEffect(() => {
-  const calculateItemsPerPage = () => {
-    if (tableContainerRef.current) {
-      const containerHeight = tableContainerRef.current.clientHeight;
-      const thead = tableContainerRef.current.querySelector('thead');
-      const firstRow = tableContainerRef.current.querySelector('tbody tr');
-      if (thead) HEADER_HEIGHT.current = thead.clientHeight;
-      if (firstRow) ROW_HEIGHT.current = firstRow.clientHeight;
-      const availableHeight = containerHeight - HEADER_HEIGHT.current;
-      const rows = Math.floor(availableHeight / ROW_HEIGHT.current);
-      setItemsPerPage(Math.max(1, rows));
-    }
-  };
+    const calculateItemsPerPage = () => {
+      if (tableContainerRef.current) {
+        const containerHeight = tableContainerRef.current.clientHeight;
+        const thead = tableContainerRef.current.querySelector('thead');
+        const firstRow = tableContainerRef.current.querySelector('tbody tr');
+        if (thead) HEADER_HEIGHT.current = thead.clientHeight;
+        if (firstRow) ROW_HEIGHT.current = firstRow.clientHeight;
+        const availableHeight = containerHeight - HEADER_HEIGHT.current;
+        const rows = Math.floor(availableHeight / ROW_HEIGHT.current);
+        setItemsPerPage(Math.max(1, rows));
+      }
+    };
 
     requestAnimationFrame(calculateItemsPerPage);
-
     const resizeObserver = new ResizeObserver(calculateItemsPerPage);
-    if (tableContainerRef.current) {
-      resizeObserver.observe(tableContainerRef.current);
-    }
-
+    if (tableContainerRef.current) resizeObserver.observe(tableContainerRef.current);
     return () => resizeObserver.disconnect();
-  }, [loading]); // re-run after loading completes so ref is attached
+  }, [loading]);
 
-useEffect(() => {
-  const fetchBoxes = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/masterlist/boxes/${mainCategoryId}`);
-      const data = await response.json();
-      setInventoryBoxes(data);
-    } catch (error) {
-      console.error('Error fetching boxes:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchBoxes();
-}, [mainCategoryId]);// ← add searchQuery here
+  useEffect(() => {
+    const fetchBoxes = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/masterlist/boxes/${mainCategoryId}`);
+        const data = await response.json();
+        setInventoryBoxes(data);
+      } catch (error) {
+        console.error('Error fetching boxes:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBoxes();
+  }, [mainCategoryId]);
 
   const filteredBoxes = inventoryBoxes.filter((box) => {
-  if (!searchQuery.trim()) return true;
-  const query = searchQuery.toLowerCase();
-  // Match box name
-  if (box.box_name.toLowerCase().includes(query)) return true;
-  // Match any item name inside the box
-  return box.item_names?.some((item) => item.toLowerCase().includes(query));
-});
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    if (box.box_name.toLowerCase().includes(query)) return true;
+    return box.item_names?.some((item) => item.toLowerCase().includes(query));
+  });
 
   const totalPages = Math.ceil(filteredBoxes.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedBoxes = filteredBoxes.slice(startIndex, startIndex + itemsPerPage);
-
-  const handleBoxInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setBoxFormData((prev) => ({
-      ...prev,
-      [name]: value.toUpperCase(),
-    }));
-  };
 
   const handleBoxAdded = (newBox?: InventoryBox) => {
     if (newBox) {
@@ -142,17 +230,12 @@ useEffect(() => {
   const handleConfirmDelete = async () => {
     if (boxToDelete && deleteConfirmationInput === boxToDelete.box_name) {
       try {
-        const response = await fetch(`/api/masterlist/box/${boxToDelete.id}`, {
-          method: 'DELETE',
-        });
-
+        const response = await fetch(`/api/masterlist/box/${boxToDelete.id}`, { method: 'DELETE' });
         if (response.ok) {
           const newBoxList = inventoryBoxes.filter((b) => b.id !== boxToDelete.id);
           setInventoryBoxes(newBoxList);
           const newTotalPages = Math.ceil(newBoxList.length / itemsPerPage);
-          if (currentPage > newTotalPages) {
-            setCurrentPage(Math.max(1, newTotalPages));
-          }
+          if (currentPage > newTotalPages) setCurrentPage(Math.max(1, newTotalPages));
           closeDeleteModal();
         }
       } catch (error) {
@@ -161,13 +244,15 @@ useEffect(() => {
     }
   };
 
-const handleDeleteBox = (boxId: number) => {
-  const box = inventoryBoxes.find((b) => b.id === boxId);
-  if (box) {
-    setPendingDeleteBox(box);
-    setShowPasscodeForDelete(true); // show passcode gate first
-  }
-};
+  const handleDeleteBox = (boxId: number) => {
+    const box = inventoryBoxes.find((b) => b.id === boxId);
+    if (box) {
+      setPendingDeleteBox(box);
+      setShowPasscodeForDelete(true);
+    }
+  };
+
+  const colSpan = system === 'shared' ? 4 : 3;
 
   if (loading) {
     return (
@@ -178,9 +263,7 @@ const handleDeleteBox = (boxId: number) => {
           <main className="flex-1 w-full h-screen overflow-hidden flex flex-col">
             <div className="flex-shrink-0 flex items-center gap-4 p-4 border-b border-gray-200 dark:border-gray-700">
               <SidebarTrigger />
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                Masterlist - {systemDisplayName}
-              </h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Masterlist - {systemDisplayName}</h1>
             </div>
             <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
               <div className="text-gray-600 dark:text-gray-400">Loading...</div>
@@ -198,30 +281,24 @@ const handleDeleteBox = (boxId: number) => {
         <USHERSidebar />
         <main className="flex-1 w-full h-screen overflow-hidden flex flex-col">
 
-          {/* Fixed header strip */}
+          {/* Fixed header */}
           <div className="flex-shrink-0 flex items-center gap-4 p-4 border-b border-gray-200 dark:border-gray-700">
             <SidebarTrigger />
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              Masterlist - {systemDisplayName}
-            </h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Masterlist - {systemDisplayName}</h1>
           </div>
 
-          {/* Remaining area */}
-            <div className="flex-1 overflow-auto flex flex-col p-4 gap-4 bg-gray-50 dark:bg-gray-900">
+          <div className="flex-1 overflow-auto flex flex-col p-4 gap-4 bg-gray-50 dark:bg-gray-900">
 
             {/* Search / Add bar */}
             <div className="flex-shrink-0 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex gap-3 flex-col lg:flex-row items-end">
                 <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input
                     type="text"
-                    placeholder="Search Box/Item"
+                    placeholder="Search Box / Item"
                     value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setCurrentPage(1);
-                    }}
+                    onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -241,79 +318,45 @@ const handleDeleteBox = (boxId: number) => {
             <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col">
               <div className="flex-1 overflow-hidden" ref={tableContainerRef}>
                 <table className="w-full h-full table-fixed">
-                <thead className="bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                  <tr>
-                    <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
-                      Item Category Quantity
-                    </th>
-                    <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
-                      Box Name
-                    </th>
-                    {/* ✅ NEW */}
-                    {system === 'shared' && (
+                  <thead className="bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                    <tr>
                       <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
-                        Inventory
+                        Item Category Quantity
                       </th>
-                    )}
-                    <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
+                      <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                        Box Name
+                      </th>
+                      {system === 'shared' && (
+                        <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                          Inventory
+                        </th>
+                      )}
+                      <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+
                   <tbody>
                     {paginatedBoxes.length === 0 ? (
                       <tr className="h-full">
-                        <td colSpan={system === 'shared' ? 4 : 3} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan={colSpan} className="px-4 py-5 text-center text-gray-500 dark:text-gray-400">
                           No boxes found. Create one to get started!
                         </td>
                       </tr>
                     ) : (
                       <>
                         {paginatedBoxes.map((box) => (
-                          <tr key={box.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700">
-                            <td className="px-4 py-4 text-center text-sm">
-                              <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold text-xs">
-                                {box.category_quantity}
-                              </span>
-                            </td>
-                            <td className="px-4 py-4 text-center text-gray-900 dark:text-white font-medium text-sm">
-                              {box.box_name}
-                            </td>
-                            {/* ✅ NEW */}
-                            {system === 'shared' && (
-                              <td className="px-4 py-4 text-center text-sm">
-                                <span className={`px-2.5 py-0.5 ${getCategoryColor(box.main_category)} rounded-full font-semibold text-xs`}>
-                                  {box.main_category}
-                                </span>
-                              </td>
-                            )}
-                            <td className="px-4 py-4 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <button
-                                  onClick={() => router.visit(`/inventory/${system}/master-list/box/${box.id}`)}
-                                  className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded font-medium transition-colors text-xs"
-                                  title="View"
-                                >
-                                  <Eye size={14} />
-                                  View
-                                </button>
-                                {system !== 'shared' && (
-                                  <button
-                                    onClick={() => handleDeleteBox(box.id)}
-                                    className="inline-flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white rounded font-medium transition-colors text-xs"
-                                    title="Delete"
-                                  >
-                                    <Trash2 size={14} />
-                                    Delete
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
+                          <BoxRow
+                            key={box.id}
+                            box={box}
+                            system={system}
+                            onView={() => router.visit(`/inventory/${system}/master-list/box/${box.id}`)}
+                            onDelete={() => handleDeleteBox(box.id)}
+                          />
                         ))}
-                        {/* Filler row that stretches to fill remaining space */}
                         <tr className="h-full">
-                          <td colSpan={system === 'shared' ? 4 : 3} className="border-b border-gray-200 dark:border-gray-700" />
+                          <td colSpan={colSpan} className="border-b border-gray-200 dark:border-gray-700" />
                         </tr>
                       </>
                     )}
@@ -321,50 +364,52 @@ const handleDeleteBox = (boxId: number) => {
                 </table>
               </div>
             </div>
-              {/* Pagination */}
-              {totalPages > 1 && (
-                  <div className={`flex-shrink-0 flex items-center justify-center gap-1 py-3 flex-wrap ${totalPages <= 1 ? 'invisible' : ''}`}>
-                  <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
-                  >
-                    &lt;
-                  </button>
 
-                  <div className="flex gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`px-2.5 py-1.5 border-2 font-semibold rounded transition-colors text-xs ${
-                          currentPage === page
-                            ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
-                            : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
-                  >
-                    &gt;
-                  </button>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex-shrink-0 flex items-center justify-center gap-1 py-3 flex-wrap">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
+                >
+                  &lt;
+                </button>
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-2.5 py-1.5 border-2 font-semibold rounded transition-colors text-xs ${
+                        currentPage === page
+                          ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
+                          : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
                 </div>
-              )}
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
+                >
+                  &gt;
+                </button>
+              </div>
+            )}
+
           </div>
         </main>
-          {showPasscodeForDelete && pendingDeleteBox && (
+
+        {/* Passcode gate */}
+        {showPasscodeForDelete && pendingDeleteBox && (
           <PasscodeGate
             actionName={`delete box "${pendingDeleteBox.box_name}"`}
             onSuccess={() => {
               setShowPasscodeForDelete(false);
-              openDeleteModal(pendingDeleteBox); // open delete modal after passcode verified
+              openDeleteModal(pendingDeleteBox);
               setPendingDeleteBox(null);
             }}
             onCancel={() => {
@@ -374,6 +419,7 @@ const handleDeleteBox = (boxId: number) => {
           />
         )}
 
+        {/* Add Box Modal */}
         <AddBoxModal
           isOpen={isBoxModalOpen}
           onClose={() => setIsBoxModalOpen(false)}
@@ -386,23 +432,17 @@ const handleDeleteBox = (boxId: number) => {
         {isDeleteModalOpen && boxToDelete && (
           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
             <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-300">
-              
-              {/* Header */}
+
               <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">
-                    Delete Box
-                  </h2>
-                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-[0.2em] mt-1">
-                    Destructive Action
-                  </p>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Delete Box</h2>
+                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-[0.2em] mt-1">Destructive Action</p>
                 </div>
                 <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center text-red-600 dark:text-red-400">
                   <Trash2 size={24} strokeWidth={2.5} />
                 </div>
               </div>
 
-              {/* Body */}
               <div className="p-8 space-y-6">
                 <div className="bg-red-500/10 border-2 border-red-500/20 rounded-3xl p-6">
                   <p className="text-red-600 dark:text-red-400 font-black uppercase text-xs tracking-widest mb-2 flex items-center gap-2">
@@ -411,9 +451,7 @@ const handleDeleteBox = (boxId: number) => {
                   <p className="text-slate-900 dark:text-slate-200 font-bold text-base leading-relaxed">
                     Deleting <span className="underline decoration-red-500 decoration-2 underline-offset-4">{boxToDelete.box_name}</span> will permanently remove all associated sub-categories, items, and related information.
                   </p>
-                  <p className="text-red-600 dark:text-red-400 font-black italic mt-4 text-sm">
-                    This action cannot be undone.
-                  </p>
+                  <p className="text-red-600 dark:text-red-400 font-black italic mt-4 text-sm">This action cannot be undone.</p>
                 </div>
 
                 <div className="space-y-3">
@@ -430,12 +468,8 @@ const handleDeleteBox = (boxId: number) => {
                 </div>
               </div>
 
-              {/* Footer */}
               <div className="p-8 bg-slate-50 dark:bg-slate-800/50 flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={closeDeleteModal}
-                  className="flex-1 px-8 py-4 border-2 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white dark:hover:bg-slate-700 transition-all"
-                >
+                <button onClick={closeDeleteModal} className="flex-1 px-8 py-4 border-2 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white dark:hover:bg-slate-700 transition-all">
                   Cancel
                 </button>
                 <button
@@ -449,6 +483,7 @@ const handleDeleteBox = (boxId: number) => {
             </div>
           </div>
         )}
+
       </SidebarProvider>
     </>
   );
