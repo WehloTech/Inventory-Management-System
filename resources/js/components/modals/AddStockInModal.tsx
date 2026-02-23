@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Plus, 
+  Trash2, 
+  Box as BoxIcon, 
+  User, 
+  AlertCircle, 
+  CheckCircle2, 
+  ShoppingCart,
+  Hash,
+  MessageSquare
+} from 'lucide-react';
+import { PasscodeGate } from './PasscodeGate';
 
 interface Box {
   id: number;
@@ -49,28 +61,20 @@ const ConfirmDialog: React.FC<{
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm">
-        <div className="flex items-start gap-4 p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{message}</p>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[110] p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
+        <div className="p-8 text-center">
+          <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 ${isDangerous ? 'bg-red-100 dark:bg-red-900/30 text-red-600' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600'}`}>
+            {isDangerous ? <AlertCircle size={32} /> : <CheckCircle2 size={32} />}
           </div>
+          <h3 className="text-xl font-black text-slate-900 dark:text-white leading-tight uppercase tracking-tighter">{title}</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">{message}</p>
         </div>
-
-        <div className="p-6 flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 font-medium"
-          >
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 flex gap-3">
+          <button onClick={onCancel} className="flex-1 px-4 py-3.5 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-700 font-bold transition-all text-xs uppercase tracking-widest">
             {cancelText}
           </button>
-          <button
-            onClick={onConfirm}
-            className={`flex-1 px-4 py-2 text-white rounded-full font-medium ${
-              isDangerous ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-          >
+          <button onClick={onConfirm} className={`flex-1 px-4 py-3.5 text-white rounded-2xl font-bold transition-all active:scale-95 text-xs uppercase tracking-widest shadow-lg ${isDangerous ? 'bg-red-600 hover:bg-red-700 shadow-red-500/20' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20'}`}>
             {confirmText}
           </button>
         </div>
@@ -85,51 +89,45 @@ export const AddStockInModal: React.FC<AddStockInModalProps> = ({
   onSubmit,
   mainCategoryId,
 }) => {
+  const [passcodeVerified, setPasscodeVerified] = useState(false);
   const [items, setItems] = useState<StockInItem[]>([]);
   const [boxes, setBoxes] = useState<Box[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierInfo[]>([]);
   const [existingItems, setExistingItems] = useState<string[]>([]);
   const [allExistingSerials, setAllExistingSerials] = useState<string[]>([]);
 
-  // Form fields
   const [selectedBox, setSelectedBox] = useState<Box | null>(null);
   const [searchBox, setSearchBox] = useState('');
   const [showBoxDropdown, setShowBoxDropdown] = useState(false);
-  
   const [itemName, setItemName] = useState('');
-  const [searchItemName, setSearchItemName] = useState('');
   const [showItemSuggestions, setShowItemSuggestions] = useState(false);
-  
   const [quantity, setQuantity] = useState('');
   const [serialNumbers, setSerialNumbers] = useState<string[]>(['']);
   const [remarks, setRemarks] = useState('');
-  
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierInfo | null>(null);
   const [searchSupplier, setSearchSupplier] = useState('');
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [newSupplier, setNewSupplier] = useState({ name: '', email: '', contact: '' });
-  
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  // Fetch data when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && passcodeVerified) {
       fetchBoxes();
       fetchSuppliers();
       fetchExistingItems();
       fetchAllSerials();
+    } else if (!isOpen) {
+      setPasscodeVerified(false);
     }
-  }, [isOpen, mainCategoryId]);
+  }, [isOpen, passcodeVerified, mainCategoryId]);
 
   const fetchBoxes = async () => {
     try {
       const response = await fetch(`/api/masterlist/boxes/${mainCategoryId}`);
       const data = await response.json();
       setBoxes(data.map((box: any) => ({ id: box.id, name: box.box_name })));
-    } catch (error) {
-      console.error('Error fetching boxes:', error);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const fetchSuppliers = async () => {
@@ -137,9 +135,7 @@ export const AddStockInModal: React.FC<AddStockInModalProps> = ({
       const response = await fetch('/api/stockin/suppliers');
       const data = await response.json();
       setSuppliers(data);
-    } catch (error) {
-      console.error('Error fetching suppliers:', error);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const fetchExistingItems = async () => {
@@ -147,9 +143,7 @@ export const AddStockInModal: React.FC<AddStockInModalProps> = ({
       const response = await fetch(`/api/stockin/items/${mainCategoryId}`);
       const data = await response.json();
       setExistingItems(data);
-    } catch (error) {
-      console.error('Error fetching items:', error);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const fetchAllSerials = async () => {
@@ -157,87 +151,37 @@ export const AddStockInModal: React.FC<AddStockInModalProps> = ({
       const response = await fetch('/api/stockin/serials');
       const data = await response.json();
       setAllExistingSerials(data);
-    } catch (error) {
-      console.error('Error fetching serials:', error);
-    }
+    } catch (e) { console.error(e); }
   };
 
-  if (!isOpen) return null;
-
-  const filteredBoxes = searchBox
-    ? boxes.filter((box) => box.name.toLowerCase().includes(searchBox.toLowerCase()))
-    : boxes;
-
-  const filteredSuppliers = suppliers.filter((supplier) =>
-    supplier.name.toLowerCase().includes(searchSupplier.toLowerCase())
-  );
-
-  const filteredItems = itemName.trim()
-    ? existingItems.filter((item) => item.toLowerCase().includes(itemName.toLowerCase()))
-    : [];
+  const filteredBoxes = boxes.filter(box => box.name.toLowerCase().includes(searchBox.toLowerCase()));
+  const filteredSuppliers = suppliers.filter(s => s.name.toLowerCase().includes(searchSupplier.toLowerCase()));
+  const filteredItems = itemName.trim() ? existingItems.filter(i => i.toLowerCase().includes(itemName.toLowerCase())) : [];
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
     if (!selectedBox) newErrors.boxName = 'Box is required';
     if (!itemName.trim()) newErrors.itemName = 'Item name is required';
-    if (!quantity || parseInt(quantity) <= 0) newErrors.quantity = 'Quantity must be greater than 0';
+    if (!quantity || parseInt(quantity) <= 0) newErrors.quantity = 'Quantity is required';
+    if (!remarks.trim()) newErrors.remarks = 'Remarks are required';
     if (!selectedSupplier) newErrors.supplier = 'Supplier is required';
 
-    const validSerials = serialNumbers.filter((s) => s.trim());
-    if (validSerials.length === 0) {
-      newErrors.serials = 'At least one serial number is required';
-    }
+    const validSerials = serialNumbers.slice(0, parseInt(quantity || '0')).filter(s => s.trim());
     if (validSerials.length !== parseInt(quantity || '0')) {
-      newErrors.serials = `You must have ${quantity} serial number(s), got ${validSerials.length}`;
+      newErrors.serials = `All ${quantity} serial numbers are required`;
     }
 
-    const duplicates = validSerials.filter((serial) => allExistingSerials.includes(serial));
-    if (duplicates.length > 0) {
-      newErrors.serials = `These serial numbers already exist: ${duplicates.join(', ')}`;
-    }
+    const duplicates = validSerials.filter(s => allExistingSerials.includes(s));
+    if (duplicates.length > 0) newErrors.serials = `Duplicate serials found: ${duplicates.join(', ')}`;
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleAddNewSupplier = async () => {
-    if (!newSupplier.name.trim() || !newSupplier.email.trim() || !newSupplier.contact.trim()) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/stockin/supplier', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newSupplier),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const createdSupplier: SupplierInfo = {
-          id: data.data.id.toString(),
-          name: data.data.name,
-          email: data.data.email,
-          contact: data.data.contact_number,
-        };
-
-        setSuppliers([...suppliers, createdSupplier]);
-        setSelectedSupplier(createdSupplier);
-        setNewSupplier({ name: '', email: '', contact: '' });
-        setShowAddSupplier(false);
-        setSearchSupplier('');
-      }
-    } catch (error) {
-      console.error('Error creating supplier:', error);
-    }
-  };
-
   const handleAddItem = () => {
     if (!validateForm()) return;
-
     const qty = parseInt(quantity);
-    const validSerials = serialNumbers.filter((s) => s.trim());
+    const validSerials = serialNumbers.slice(0, qty).filter(s => s.trim());
 
     const newItem: StockInItem = {
       id: `item-${Date.now()}`,
@@ -246,30 +190,11 @@ export const AddStockInModal: React.FC<AddStockInModalProps> = ({
       itemName,
       quantity: qty,
       remarks,
-      serialGroups: [
-        {
-          serialNumbers: validSerials,
-          supplierId: selectedSupplier!.id,
-          supplierName: selectedSupplier!.name,
-        },
-      ],
+      serialGroups: [{ serialNumbers: validSerials, supplierId: selectedSupplier!.id, supplierName: selectedSupplier!.name }],
     };
 
     setItems([...items, newItem]);
-
-    // Reset form
-    setSelectedBox(null);
-    setSearchBox('');
-    setItemName('');
-    setSearchItemName('');
-    setQuantity('');
-    setSerialNumbers(['']);
-    setRemarks('');
-    setSelectedSupplier(null);
-    setSearchSupplier('');
-    setShowItemSuggestions(false);
-    setShowBoxDropdown(false);
-    setErrors({});
+    setSelectedBox(null); setItemName(''); setQuantity(''); setSerialNumbers(['']); setRemarks(''); setSelectedSupplier(null); setErrors({});
   };
 
   const handleSerialChange = (index: number, value: string) => {
@@ -278,416 +203,281 @@ export const AddStockInModal: React.FC<AddStockInModalProps> = ({
     setSerialNumbers(newSerials);
   };
 
-  const handleRemoveItem = (id: string) => {
-    setDeleteConfirm(id);
+  const handleAddNewSupplier = async () => {
+    if (!newSupplier.name.trim() || !newSupplier.email.trim() || !newSupplier.contact.trim()) return;
+    try {
+      const response = await fetch('/api/stockin/supplier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSupplier),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const created = { id: data.data.id.toString(), name: data.data.name, email: data.data.email, contact: data.data.contact_number };
+        setSuppliers([...suppliers, created]);
+        setSelectedSupplier(created);
+        setShowAddSupplier(false);
+        setNewSupplier({ name: '', email: '', contact: '' });
+      }
+    } catch (e) { console.error(e); }
   };
 
   const confirmRemoveItem = () => {
     if (deleteConfirm) {
-      setItems(items.filter((item) => item.id !== deleteConfirm));
+      setItems(items.filter(i => i.id !== deleteConfirm));
       setDeleteConfirm(null);
     }
   };
 
-  const handleSubmit = () => {
-    if (items.length === 0) {
-      return;
-    }
-
-    onSubmit(items);
-
-    // Reset everything
+  const handleClose = () => {
+    setPasscodeVerified(false);
     setItems([]);
     setSelectedBox(null);
-    setSearchBox('');
     setItemName('');
-    setSearchItemName('');
     setQuantity('');
     setSerialNumbers(['']);
     setRemarks('');
     setSelectedSupplier(null);
-    setSearchSupplier('');
-    setShowAddSupplier(false);
     setErrors({});
     onClose();
   };
 
+  const handleSubmit = () => {
+    if (items.length === 0) return;
+    onSubmit(items);
+    setItems([]);
+    handleClose();
+  };
+
+  if (!isOpen) return null;
+
+  // ── Show PasscodeGate first ──
+  if (!passcodeVerified) {
+    return (
+      <PasscodeGate
+        actionName="add stock in"
+        onSuccess={() => setPasscodeVerified(true)}
+        onCancel={handleClose}
+      />
+    );
+  }
+
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col lg:flex-row">
-          {/* Left Side - Form */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-6 gap-2 flex-wrap">
-              <button
-                onClick={onClose}
-                className="flex items-center gap-2 text-white font-semibold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition whitespace-nowrap text-sm sm:text-base"
-              >
-                <ArrowLeft size={18} />
-                Back
+      <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-6xl max-h-[94vh] overflow-hidden flex flex-col lg:flex-row border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-300">
+          
+          {/* Left Side: Form */}
+          <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar">
+            <div className="flex items-center justify-between mb-10">
+              <button onClick={handleClose} className="bg-slate-100 dark:bg-slate-800 p-3 rounded-full hover:bg-blue-600 hover:text-white transition-all active:scale-90">
+                <ArrowLeft size={20} strokeWidth={3} />
               </button>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white text-center flex-1 lg:flex-none">
-                Add Stock In
-              </h2>
-              <div className="w-16 sm:w-32" />
+              <div className="text-center">
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic leading-none">Stock Entry</h2>
+                <p className="text-[10px] font-bold text-blue-500 uppercase tracking-[0.2em] mt-1 italic">Validation Required</p>
+              </div>
+              <div className="w-10" />
             </div>
 
-            {/* Item Form Section */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 space-y-3 bg-gray-50 dark:bg-gray-700">
-              {/* Box Name - Dropdown only */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  Box Name:
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={selectedBox ? selectedBox.name : searchBox}
-                    onChange={(e) => {
-                      if (!selectedBox) {
-                        setSearchBox(e.target.value);
-                        setShowBoxDropdown(true);
-                      }
-                    }}
-                    onFocus={() => setShowBoxDropdown(true)}
-                    placeholder="Select box"
-                    readOnly={!!selectedBox}
-                    className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                      errors.boxName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    } ${selectedBox ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
-                  />
-                  {selectedBox && (
-                    <button
-                      onClick={() => {
-                        setSelectedBox(null);
-                        setSearchBox('');
-                      }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      ×
-                    </button>
-                  )}
-                  {showBoxDropdown && !selectedBox && filteredBoxes.length > 0 && (
-                    <div className="absolute top-full mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                      {filteredBoxes.map((box) => (
-                        <button
-                          key={box.id}
-                          onClick={() => {
-                            setSelectedBox(box);
-                            setShowBoxDropdown(false);
-                            if (errors.boxName) setErrors({ ...errors, boxName: '' });
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600 last:border-b-0 text-sm"
-                        >
-                          {box.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {errors.boxName && <p className="text-red-500 text-xs mt-1">{errors.boxName}</p>}
-              </div>
-
-              {/* Item Name - Searchable, can type new */}
-              <div>
-                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                  Item Name:
-                </label>
-                <div className="relative">
-                <input
-                    type="text"
-                    value={itemName}
-                    onChange={(e) => {
-                    setItemName(e.target.value);
-                    setSearchItemName(e.target.value);
-                    setShowItemSuggestions(true);
-                    if (errors.itemName) setErrors({ ...errors, itemName: '' });
-                    }}
-                    onBlur={() => {
-                    // Delay hiding to allow click to register
-                    setTimeout(() => setShowItemSuggestions(false), 200);
-                    }}
-                    onFocus={() => {
-                    if (itemName) setShowItemSuggestions(true);
-                    }}
-                    placeholder="Search or type item name"
-                    className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                    errors.itemName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    }`}
-                />
-                {showItemSuggestions && filteredItems.length > 0 && (
-                    <div className="absolute top-full mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto">
-                    {filteredItems.map((item) => (
-                        <button
-                        key={item}
-                        onMouseDown={(e) => {
-                            e.preventDefault(); // Prevent blur
-                            setItemName(item);
-                            setShowItemSuggestions(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600 last:border-b-0 text-sm"
-                        >
-                        {item}
-                        </button>
-                    ))}
-                    </div>
-                )}
-                </div>
-                {errors.itemName && <p className="text-red-500 text-xs mt-1">{errors.itemName}</p>}
-              </div>
-
-              {/* Quantity */}
-              <div>
-                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                  Quantity:
-                </label>
-                <input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 0;
-                    setQuantity(val.toString());
-                    if (errors.quantity) setErrors({ ...errors, quantity: '' });
-
-                    if (val > serialNumbers.length) {
-                      const diff = val - serialNumbers.length;
-                      setSerialNumbers([...serialNumbers, ...Array(diff).fill('')]);
-                    }
-                  }}
-                  placeholder="Enter Quantity"
-                  min="1"
-                  className={`w-full px-4 py-2 border-2 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                    errors.quantity ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                  }`}
-                />
-              </div>
-
-              {/* Serial Numbers */}
-              {quantity && parseInt(quantity) > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                    SN (Serial Numbers):
+            <div className="space-y-8">
+              {/* Box & Item Name */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                    <BoxIcon size={12} /> Destination Box <span className="text-red-500">*</span>
                   </label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {serialNumbers.slice(0, parseInt(quantity)).map((serial, index) => (
-                      <input
-                        key={index}
-                        type="text"
-                        value={serial}
-                        onChange={(e) => handleSerialChange(index, e.target.value)}
-                        placeholder={`Serial #${index + 1}`}
-                        className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      />
-                    ))}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={selectedBox ? selectedBox.name : searchBox}
+                      onChange={(e) => { setSearchBox(e.target.value); setShowBoxDropdown(true); }}
+                      onFocus={() => setShowBoxDropdown(true)}
+                      placeholder="Search container..."
+                      readOnly={!!selectedBox}
+                      className={`w-full px-6 py-4 border-2 rounded-2xl bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold focus:outline-none transition-all ${errors.boxName ? 'border-red-500 bg-red-50/10' : 'border-slate-100 dark:border-slate-800 focus:border-blue-500'}`}
+                    />
+                    {selectedBox && <button onClick={() => { setSelectedBox(null); setSearchBox(''); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">×</button>}
+                    {showBoxDropdown && !selectedBox && filteredBoxes.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-20 max-h-48 overflow-y-auto">
+                        {filteredBoxes.map(box => (
+                          <button key={box.id} onClick={() => { setSelectedBox(box); setShowBoxDropdown(false); }} className="w-full text-left px-5 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-bold text-sm">{box.name}</button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {errors.serials && <p className="text-red-500 text-xs mt-1">{errors.serials}</p>}
                 </div>
-              )}
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                    <ShoppingCart size={12} /> Item Name <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={itemName}
+                      onChange={(e) => { setItemName(e.target.value); setShowItemSuggestions(true); }}
+                      placeholder="Type Item Name..."
+                      className={`w-full px-6 py-4 border-2 rounded-2xl bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold focus:outline-none transition-all ${errors.itemName ? 'border-red-500 bg-red-50/10' : 'border-slate-100 dark:border-slate-800 focus:border-blue-500'}`}
+                    />
+                    {showItemSuggestions && filteredItems.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border rounded-2xl shadow-2xl z-20 overflow-hidden">
+                        {filteredItems.map(i => <button key={i} onMouseDown={() => { setItemName(i); setShowItemSuggestions(false); }} className="w-full text-left px-5 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-bold text-xs">{i}</button>)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Quantity & Serials */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                    <Hash size={12} /> Units <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      setQuantity(val.toString());
+                      if (val > serialNumbers.length) setSerialNumbers([...serialNumbers, ...Array(val - serialNumbers.length).fill('')]);
+                    }}
+                    placeholder="0"
+                    className={`w-full px-6 py-4 border-2 rounded-2xl bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-black text-2xl outline-none transition-all ${errors.quantity ? 'border-red-500' : 'border-slate-100 dark:border-slate-800 focus:border-blue-500'}`}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Serial Identifiers <span className="text-red-500">*</span></label>
+                  <div className={`border-2 rounded-2xl p-2 bg-slate-50/50 dark:bg-slate-950/10 max-h-[140px] overflow-y-auto space-y-2 custom-scrollbar transition-all ${errors.serials ? 'border-red-500 bg-red-50/5' : 'border-slate-100 dark:border-slate-800'}`}>
+                    {serialNumbers.slice(0, parseInt(quantity || '0')).map((sn, idx) => (
+                      <input key={idx} value={sn} onChange={(e) => handleSerialChange(idx, e.target.value)} placeholder={`SN #${idx + 1}`} className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" />
+                    ))}
+                    {!quantity || parseInt(quantity) === 0 ? <p className="text-center py-6 text-[10px] font-black text-slate-300 uppercase italic">Input units above</p> : null}
+                  </div>
+                  {errors.serials && <p className="text-[9px] text-red-500 font-bold ml-1">{errors.serials}</p>}
+                </div>
+              </div>
 
               {/* Remarks */}
-              <div>
-                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                  Remarks:
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  <MessageSquare size={12} /> Remarks <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
-                  placeholder="Add remarks (optional)..."
-                  rows={3}
-                  className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+                  placeholder="Required: Specific details about this stock-in..."
+                  className={`w-full px-6 py-4 border-2 rounded-2xl bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none transition-all resize-none ${errors.remarks ? 'border-red-500' : 'border-slate-100 dark:border-slate-800 focus:border-blue-500'}`}
+                  rows={2}
                 />
               </div>
 
-              {/* Supplier */}
-              <div className="border-t border-gray-300 dark:border-gray-600 pt-4">
-                <div className="mb-3">
-                  <label className="text-sm font-medium text-gray-900 dark:text-white">Supplier:</label>
-                </div>
-
+              {/* Supplier Section */}
+              <div className="pt-4 space-y-4">
+                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  <User size={12} /> Supplier <span className="text-red-500">*</span>
+                </label>
                 {!showAddSupplier ? (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                    <input
+                  <div className="flex gap-3">
+                    <div className="relative flex-1">
+                      <input
                         type="text"
                         value={searchSupplier}
                         onChange={(e) => setSearchSupplier(e.target.value)}
-                        onBlur={() => {
-                        // Delay hiding to allow click to register
-                        setTimeout(() => setSearchSupplier(''), 200);
-                        }}
-                        placeholder="Search Supplier"
-                        className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                    {searchSupplier && filteredSuppliers.length > 0 && (
-                        <div className="absolute top-full mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto">
-                        {filteredSuppliers.map((supplier) => (
-                            <button
-                            key={supplier.id}
-                            onMouseDown={(e) => {
-                                e.preventDefault(); // Prevent blur
-                                setSelectedSupplier(supplier);
-                                setSearchSupplier('');
-                                if (errors.supplier) setErrors({ ...errors, supplier: '' });
-                            }}
-                            className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600 last:border-b-0 text-sm"
-                            >
-                            {supplier.name}
-                            </button>
-                        ))}
+                        placeholder="Search vendors..."
+                        className={`w-full px-6 py-4 border-2 rounded-2xl bg-slate-50 dark:bg-slate-800/50 text-sm font-bold focus:border-blue-500 outline-none transition-all ${errors.supplier ? 'border-red-500' : 'border-slate-100 dark:border-slate-800'}`}
+                      />
+                      {searchSupplier && filteredSuppliers.length > 0 && (
+                        <div className="absolute bottom-full mb-2 left-0 right-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-30 max-h-40 overflow-y-auto">
+                          {filteredSuppliers.map(s => <button key={s.id} onMouseDown={() => { setSelectedSupplier(s); setSearchSupplier(''); }} className="w-full text-left px-5 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-bold text-sm border-b last:border-0 dark:border-slate-700">{s.name}</button>)}
                         </div>
-                    )}
+                      )}
                     </div>
-                      <button
-                        onClick={() => setShowAddSupplier(true)}
-                        className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-medium text-sm whitespace-nowrap"
-                      >
-                        Add
-                      </button>
-                    </div>
-
-                    {selectedSupplier && (
-                      <div className="p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
-                        <p className="text-sm text-gray-900 dark:text-white">
-                          <span className="font-semibold">Selected:</span> {selectedSupplier.name}
-                        </p>
-                      </div>
-                    )}
-
-                    {errors.supplier && <p className="text-red-500 text-xs">{errors.supplier}</p>}
+                    <button onClick={() => setShowAddSupplier(true)} className="px-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-2xl text-[10px] uppercase tracking-[0.15em] hover:scale-105 active:scale-95 transition-all">New</button>
                   </div>
                 ) : (
-                  <div className="space-y-2 border-2 border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-gray-50 dark:bg-gray-700">
-                    <input
-                      type="text"
-                      value={newSupplier.name}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
-                      placeholder="Supplier Name"
-                      className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                    <input
-                      type="email"
-                      value={newSupplier.email}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
-                      placeholder="Email"
-                      className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                    <input
-                      type="text"
-                      value={newSupplier.contact}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, contact: e.target.value })}
-                      placeholder="Contact"
-                      className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setShowAddSupplier(false)}
-                        className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 text-sm font-medium"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleAddNewSupplier}
-                        className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full text-sm font-medium"
-                      >
-                        Add
-                      </button>
+                  <div className="p-6 border-2 border-dashed border-blue-500/30 rounded-3xl space-y-4 bg-blue-500/5 animate-in slide-in-from-top-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <input type="text" value={newSupplier.name} onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })} placeholder="Shop Name *" className="w-full p-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-xs font-bold" />
+                      <input type="email" value={newSupplier.email} onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })} placeholder="Email *" className="w-full p-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-xs font-bold" />
+                    </div>
+                    <div className="flex gap-3">
+                      <input type="text" value={newSupplier.contact} onChange={(e) => setNewSupplier({ ...newSupplier, contact: e.target.value })} placeholder="Contact Number *" className="flex-1 p-3.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-xs font-bold" />
+                      <button onClick={() => setShowAddSupplier(false)} className="px-4 text-[10px] font-black uppercase text-slate-400">Cancel</button>
+                      <button onClick={handleAddNewSupplier} className="px-6 py-2 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20">Add</button>
                     </div>
                   </div>
                 )}
+                {selectedSupplier && <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl animate-in zoom-in-95"><CheckCircle2 size={16} className="text-green-500" /><span className="text-xs font-black text-green-700 dark:text-green-400 uppercase">{selectedSupplier.name} Linked</span></div>}
               </div>
 
               <button
                 onClick={handleAddItem}
-                className="w-full px-6 py-3 border-2 border-gray-900 dark:border-white rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold flex items-center justify-center gap-2 mt-4 text-sm sm:text-base"
+                className="w-full py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[1.5rem] font-black transition-all flex items-center justify-center gap-3 shadow-2xl active:scale-[0.98] uppercase tracking-[0.2em] text-xs"
               >
-                <Plus size={20} />
-                Add item
+                <Plus size={22} strokeWidth={4} />
+                Add Item
               </button>
             </div>
           </div>
 
-          {/* Right Side - Items List */}
-          <div className="w-full lg:w-80 bg-gray-50 dark:bg-gray-700 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-600 overflow-y-auto flex flex-col max-h-[50vh] lg:max-h-full">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-600 flex-shrink-0">
-              <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
-                Items ({items.length})
-              </h3>
-              {items.length > 0 && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Total Qt: {items.reduce((sum, item) => sum + item.quantity, 0)}
-                </p>
+          {/* Right Side: Manifest Sidebar */}
+          <div className="w-full lg:w-[400px] bg-slate-50 dark:bg-slate-950 flex flex-col border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800">
+            <div className="p-8 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
+              <div className="mt-6 flex items-center justify-between p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Qty</p>
+                 <p className="text-sm font-black text-blue-600 dark:text-blue-400">{items.reduce((s, i) => s + i.quantity, 0)} Units</p>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+              {items.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-20 py-20">
+                  <BoxIcon size={48} strokeWidth={1} className="mb-4" />
+                  <p className="text-xs font-black uppercase tracking-widest">Empty</p>
+                </div>
+              ) : (
+                items.map(item => (
+                  <div key={item.id} className="group bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm relative transition-all hover:shadow-lg animate-in slide-in-from-right-4">
+                    <button onClick={() => setDeleteConfirm(item.id)} className="absolute -top-2 -right-2 bg-red-500 text-white p-2 rounded-full shadow-xl opacity-0 group-hover:opacity-100 transition-all active:scale-90"><Trash2 size={12} strokeWidth={3} /></button>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start pb-2 border-b border-slate-50 dark:border-slate-800">
+                        <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-[13px]">{item.itemName}</p>
+                        <span className="text-blue-600 font-black text-[13px]">x{item.quantity}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-[9px] font-black text-slate-400 uppercase">
+                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">{item.boxName}</span>
+                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md max-w-[120px] truncate">{item.serialGroups[0].supplierName}</span>
+                      </div>
+                      <p className="text-[10px] italic text-slate-400 leading-tight line-clamp-2">"{item.remarks}"</p>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
 
-            {items.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center p-4">
-                <p className="text-center text-gray-600 dark:text-gray-400 text-sm">No items added yet</p>
-              </div>
-            ) : (
-              <div className="flex-1 overflow-y-auto space-y-2 p-4">
-                {items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-600"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">
-                          {item.itemName}
-                        </p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Box: {item.boxName}</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Qty: {item.quantity}</p>
-                        {item.serialGroups.map((group, idx) => (
-                          <p key={idx} className="text-xs text-gray-500 dark:text-gray-500">
-                            {group.supplierName}
-                          </p>
-                        ))}
-                        {item.remarks && (
-                          <p className="text-xs text-gray-500 dark:text-gray-500 italic mt-1">
-                            "{item.remarks}"
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleRemoveItem(item.id)}
-                        className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded flex-shrink-0"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="p-4 border-t border-gray-200 dark:border-gray-600 flex-shrink-0 space-y-2">
+            <div className="p-8 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 space-y-4">
               <button
                 onClick={handleSubmit}
                 disabled={items.length === 0}
-                className="w-full px-6 py-3 border-2 border-gray-900 dark:border-white rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm sm:text-base"
+                className="w-full py-5 bg-green-600 hover:bg-green-700 text-white font-black rounded-3xl shadow-xl shadow-green-500/20 active:scale-95 transition-all uppercase tracking-widest text-[11px]"
               >
-                Submit
+                Submit All Entries
               </button>
-              <button
-                onClick={onClose}
-                className="w-full px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-full text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold text-sm sm:text-base"
-              >
-                Cancel
-              </button>
+              <button onClick={handleClose} className="w-full text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors">Cancel</button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Delete Confirmation */}
       <ConfirmDialog
         isOpen={deleteConfirm !== null}
-        title="Delete Item"
-        message="Are you sure you want to delete this item from the list?"
+        title="Remove Asset"
+        message="This will remove the entry from your current session."
         onConfirm={confirmRemoveItem}
         onCancel={() => setDeleteConfirm(null)}
-        confirmText="Delete"
+        confirmText="Remove"
         cancelText="Cancel"
         isDangerous
       />
