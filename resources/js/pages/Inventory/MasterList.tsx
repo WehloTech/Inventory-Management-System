@@ -8,6 +8,7 @@ import {
 import { Search, Plus, X, Eye, Trash2, AlertCircle} from 'lucide-react';
 import { AddBoxModal } from '@/components/modals/AddBoxModal';
 import { getCategoryColor } from '@/utils/categoryColors';
+import { PasscodeGate } from '@/components/modals/PasscodeGate';
 
 
 interface InventoryBox {
@@ -15,6 +16,7 @@ interface InventoryBox {
   box_name: string;
   category_quantity: number;
   main_category: string;
+  item_names?: string[]; // ← optional, new boxes start with no items
 }
 
 interface Props {
@@ -48,7 +50,9 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
 
   const [boxError, setBoxError] = useState('');
   const [showBoxError, setShowBoxError] = useState(false);
-
+  // Add these two new states
+  const [showPasscodeForDelete, setShowPasscodeForDelete] = useState(false);
+  const [pendingDeleteBox, setPendingDeleteBox] = useState<InventoryBox | null>(null)
   const systemDisplayName = system.toUpperCase();
 
   // Dynamic items per page based on container height
@@ -76,27 +80,31 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
     return () => resizeObserver.disconnect();
   }, [loading]); // re-run after loading completes so ref is attached
 
-  useEffect(() => {
-    const fetchBoxes = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/masterlist/boxes/${mainCategoryId}`);
-        const data = await response.json();
-        setInventoryBoxes(data);
-      } catch (error) {
-        console.error('Error fetching boxes:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+useEffect(() => {
+  const fetchBoxes = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/masterlist/boxes/${mainCategoryId}`);
+      const data = await response.json();
+      setInventoryBoxes(data);
+    } catch (error) {
+      console.error('Error fetching boxes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchBoxes();
-  }, [mainCategoryId]);
+  fetchBoxes();
+}, [mainCategoryId]);// ← add searchQuery here
 
   const filteredBoxes = inventoryBoxes.filter((box) => {
-    const query = searchQuery.toLowerCase();
-    return box.box_name.toLowerCase().includes(query);
-  });
+  if (!searchQuery.trim()) return true;
+  const query = searchQuery.toLowerCase();
+  // Match box name
+  if (box.box_name.toLowerCase().includes(query)) return true;
+  // Match any item name inside the box
+  return box.item_names?.some((item) => item.toLowerCase().includes(query));
+});
 
   const totalPages = Math.ceil(filteredBoxes.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -153,12 +161,13 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
     }
   };
 
-  const handleDeleteBox = (boxId: number) => {
-    const box = inventoryBoxes.find((b) => b.id === boxId);
-    if (box) {
-      openDeleteModal(box);
-    }
-  };
+const handleDeleteBox = (boxId: number) => {
+  const box = inventoryBoxes.find((b) => b.id === boxId);
+  if (box) {
+    setPendingDeleteBox(box);
+    setShowPasscodeForDelete(true); // show passcode gate first
+  }
+};
 
   if (loading) {
     return (
@@ -235,10 +244,10 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
                 <thead className="bg-gray-200 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                   <tr>
                     <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
-                      Box Name
+                      Item Category Quantity
                     </th>
                     <th className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
-                      Item Category Quantity
+                      Box Name
                     </th>
                     {/* ✅ NEW */}
                     {system === 'shared' && (
@@ -262,13 +271,13 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
                       <>
                         {paginatedBoxes.map((box) => (
                           <tr key={box.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700">
-                            <td className="px-4 py-4 text-center text-gray-900 dark:text-white font-medium text-sm">
-                              {box.box_name}
-                            </td>
                             <td className="px-4 py-4 text-center text-sm">
                               <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold text-xs">
                                 {box.category_quantity}
                               </span>
+                            </td>
+                            <td className="px-4 py-4 text-center text-gray-900 dark:text-white font-medium text-sm">
+                              {box.box_name}
                             </td>
                             {/* ✅ NEW */}
                             {system === 'shared' && (
@@ -348,9 +357,22 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
                   </button>
                 </div>
               )}
-
           </div>
         </main>
+          {showPasscodeForDelete && pendingDeleteBox && (
+          <PasscodeGate
+            actionName={`delete box "${pendingDeleteBox.box_name}"`}
+            onSuccess={() => {
+              setShowPasscodeForDelete(false);
+              openDeleteModal(pendingDeleteBox); // open delete modal after passcode verified
+              setPendingDeleteBox(null);
+            }}
+            onCancel={() => {
+              setShowPasscodeForDelete(false);
+              setPendingDeleteBox(null);
+            }}
+          />
+        )}
 
         <AddBoxModal
           isOpen={isBoxModalOpen}
@@ -360,7 +382,7 @@ const MasterList: MasterListPageComponent = ({ mainCategoryId, system }) => {
           onSuccess={handleBoxAdded}
         />
 
-{/* Delete Confirmation Modal */}
+        {/* Delete Confirmation Modal */}
         {isDeleteModalOpen && boxToDelete && (
           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
             <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-300">

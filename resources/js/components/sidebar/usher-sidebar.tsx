@@ -24,6 +24,7 @@ import {
   ShoppingCart,
   Truck,
   BarChart3,
+  FlaskConical,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/themetoggle';
 
@@ -64,6 +65,11 @@ const getNavItems = (system: string): NavItem[] => [
         title: 'Damaged',
         href: `/inventory/${system}/damaged`,
         icon: ShieldAlert,
+      },
+      {
+        title: 'Consumable',
+        href: `/inventory/${system}/consumable`,
+        icon: FlaskConical,
       },
     ],
   },

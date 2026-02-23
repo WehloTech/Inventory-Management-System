@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Box as BoxIcon, AlertCircle } from 'lucide-react';
+import { PasscodeGate } from './PasscodeGate';
 
 interface InventoryBox {
   id: number;
@@ -23,12 +24,21 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
   system,
   onSuccess,
 }) => {
+  const [passcodeVerified, setPasscodeVerified] = useState(false);
   const [boxFormData, setBoxFormData] = useState({ boxNumber: '' });
   const [boxError, setBoxError] = useState('');
   const [showBoxError, setShowBoxError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const systemDisplayName = system.toUpperCase();
+
+  const handleClose = () => {
+    setPasscodeVerified(false);
+    setBoxFormData({ boxNumber: '' });
+    setBoxError('');
+    setShowBoxError(false);
+    onClose();
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
@@ -85,14 +95,18 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
     }
   };
 
-  const handleClose = () => {
-    setBoxFormData({ boxNumber: '' });
-    setBoxError('');
-    setShowBoxError(false);
-    onClose();
-  };
-
   if (!isOpen) return null;
+
+  // ── Show PasscodeGate first ──
+  if (!passcodeVerified) {
+    return (
+      <PasscodeGate
+        actionName="add a new box"
+        onSuccess={() => setPasscodeVerified(true)}
+        onCancel={handleClose}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -104,7 +118,6 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
             <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none italic">
               New Box
             </h2>
-
           </div>
           <button
             onClick={handleClose}
@@ -118,7 +131,6 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
         {/* Body */}
         <form onSubmit={handleSubmit} className="px-8 py-8 space-y-6">
           
-          {/* Error Message */}
           {showBoxError && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 flex items-center gap-3 animate-in slide-in-from-top-2">
               <AlertCircle className="text-red-500 shrink-0" size={18} />
@@ -126,7 +138,6 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
             </div>
           )}
 
-          {/* Read-only Category Info */}
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
               Main Category
@@ -136,7 +147,6 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
             </div>
           </div>
 
-          {/* Box Name Input */}
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
               <BoxIcon size={12} /> Box Name
@@ -150,8 +160,8 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
               placeholder="Enter box name..."
               disabled={isSubmitting}
               className={`w-full px-6 py-4 rounded-2xl border-2 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-black text-lg placeholder:text-slate-300 focus:outline-none transition-all ${
-                showBoxError 
-                  ? 'border-red-500 focus:ring-red-500/20' 
+                showBoxError
+                  ? 'border-red-500 focus:ring-red-500/20'
                   : 'border-slate-100 dark:border-slate-800 focus:border-blue-500'
               } disabled:opacity-50`}
             />
@@ -172,7 +182,7 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
             disabled={isSubmitting}
             className="w-full text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors disabled:opacity-50"
           >
-            Cancel 
+            Cancel
           </button>
         </div>
 

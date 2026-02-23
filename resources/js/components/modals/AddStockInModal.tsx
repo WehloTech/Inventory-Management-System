@@ -11,6 +11,7 @@ import {
   Hash,
   MessageSquare
 } from 'lucide-react';
+import { PasscodeGate } from './PasscodeGate';
 
 interface Box {
   id: number;
@@ -88,6 +89,7 @@ export const AddStockInModal: React.FC<AddStockInModalProps> = ({
   onSubmit,
   mainCategoryId,
 }) => {
+  const [passcodeVerified, setPasscodeVerified] = useState(false);
   const [items, setItems] = useState<StockInItem[]>([]);
   const [boxes, setBoxes] = useState<Box[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierInfo[]>([]);
@@ -110,13 +112,15 @@ export const AddStockInModal: React.FC<AddStockInModalProps> = ({
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && passcodeVerified) {
       fetchBoxes();
       fetchSuppliers();
       fetchExistingItems();
       fetchAllSerials();
+    } else if (!isOpen) {
+      setPasscodeVerified(false);
     }
-  }, [isOpen, mainCategoryId]);
+  }, [isOpen, passcodeVerified, mainCategoryId]);
 
   const fetchBoxes = async () => {
     try {
@@ -156,8 +160,6 @@ export const AddStockInModal: React.FC<AddStockInModalProps> = ({
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
-    // STRICT VALIDATION: Check all inputs
     if (!selectedBox) newErrors.boxName = 'Box is required';
     if (!itemName.trim()) newErrors.itemName = 'Item name is required';
     if (!quantity || parseInt(quantity) <= 0) newErrors.quantity = 'Quantity is required';
@@ -192,8 +194,6 @@ export const AddStockInModal: React.FC<AddStockInModalProps> = ({
     };
 
     setItems([...items, newItem]);
-    
-    // Reset Form
     setSelectedBox(null); setItemName(''); setQuantity(''); setSerialNumbers(['']); setRemarks(''); setSelectedSupplier(null); setErrors({});
   };
 
@@ -229,14 +229,38 @@ export const AddStockInModal: React.FC<AddStockInModalProps> = ({
     }
   };
 
+  const handleClose = () => {
+    setPasscodeVerified(false);
+    setItems([]);
+    setSelectedBox(null);
+    setItemName('');
+    setQuantity('');
+    setSerialNumbers(['']);
+    setRemarks('');
+    setSelectedSupplier(null);
+    setErrors({});
+    onClose();
+  };
+
   const handleSubmit = () => {
     if (items.length === 0) return;
     onSubmit(items);
     setItems([]);
-    onClose();
+    handleClose();
   };
 
   if (!isOpen) return null;
+
+  // ── Show PasscodeGate first ──
+  if (!passcodeVerified) {
+    return (
+      <PasscodeGate
+        actionName="add stock in"
+        onSuccess={() => setPasscodeVerified(true)}
+        onCancel={handleClose}
+      />
+    );
+  }
 
   return (
     <>
@@ -246,7 +270,7 @@ export const AddStockInModal: React.FC<AddStockInModalProps> = ({
           {/* Left Side: Form */}
           <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar">
             <div className="flex items-center justify-between mb-10">
-              <button onClick={onClose} className="bg-slate-100 dark:bg-slate-800 p-3 rounded-full hover:bg-blue-600 hover:text-white transition-all active:scale-90">
+              <button onClick={handleClose} className="bg-slate-100 dark:bg-slate-800 p-3 rounded-full hover:bg-blue-600 hover:text-white transition-all active:scale-90">
                 <ArrowLeft size={20} strokeWidth={3} />
               </button>
               <div className="text-center">
@@ -441,7 +465,7 @@ export const AddStockInModal: React.FC<AddStockInModalProps> = ({
               >
                 Submit All Entries
               </button>
-              <button onClick={onClose} className="w-full text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors">Cancel</button>
+              <button onClick={handleClose} className="w-full text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors">Cancel</button>
             </div>
           </div>
         </div>

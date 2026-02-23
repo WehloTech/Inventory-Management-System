@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, AlertCircle, CheckCircle, PackageSearch } from 'lucide-react';
+import { PasscodeGate } from './PasscodeGate';
 
 interface SerialNumberGroup {
   serialNumbers: { serial: string; boxName: string }[];
@@ -100,6 +101,7 @@ export const MoveModal: React.FC<MoveModalProps> = ({
   onMoveSuccess,
   currentStatus,
 }) => {
+  const [passcodeVerified, setPasscodeVerified] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [dashboardEntries, setDashboardEntries] = useState<StockInDashboardEntry[]>([]);
   const [searchItem, setSearchItem] = useState('');
@@ -119,10 +121,26 @@ export const MoveModal: React.FC<MoveModalProps> = ({
   const isDamageSelected = location === 'Damage';
   const isRemarksEmpty = !remarks.trim();
 
+  const handleClose = () => {
+    setPasscodeVerified(false);
+    setStep(1);
+    setSearchItem('');
+    setSelectedEntry(null);
+    setSelectedSerials(new Set());
+    setLocation('');
+    setRemarks('');
+    setBoxesForSubcategory([]);
+    setSelectedBoxId(null);
+    setSearchBox('');
+    setShowBoxDropdown(false);
+    onClose();
+  };
+
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && passcodeVerified) {
       fetchStockInItems();
-    } else {
+    } else if (!isOpen) {
+      setPasscodeVerified(false);
       setStep(1);
       setSearchItem('');
       setSelectedEntry(null);
@@ -134,7 +152,7 @@ export const MoveModal: React.FC<MoveModalProps> = ({
       setSearchBox('');
       setShowBoxDropdown(false);
     }
-  }, [isOpen, mainCategoryId]);
+  }, [isOpen, passcodeVerified, mainCategoryId]);
 
   const fetchStockInItems = async () => {
     try {
@@ -165,6 +183,17 @@ export const MoveModal: React.FC<MoveModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  // ── Show PasscodeGate first ──
+  if (!passcodeVerified) {
+    return (
+      <PasscodeGate
+        actionName="move items"
+        onSuccess={() => setPasscodeVerified(true)}
+        onCancel={handleClose}
+      />
+    );
+  }
 
   const uniqueItems = dashboardEntries.map((e) => e.itemName);
   const filteredItems = searchItem
@@ -217,7 +246,7 @@ export const MoveModal: React.FC<MoveModalProps> = ({
       if (!response.ok) throw new Error('Failed to move items');
 
       onMoveSuccess();
-      onClose();
+      handleClose();
     } catch (error) {
       console.error(error);
       alert('Failed to move items');
@@ -240,7 +269,7 @@ export const MoveModal: React.FC<MoveModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
             <button
-              onClick={() => step === 1 ? onClose() : setStep((step - 1) as 1 | 2 | 3)}
+              onClick={() => step === 1 ? handleClose() : setStep((step - 1) as 1 | 2 | 3)}
               disabled={loading}
               className="flex items-center gap-2 text-white font-bold bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-full transition-all active:scale-95 disabled:opacity-50"
             >
@@ -302,12 +331,12 @@ export const MoveModal: React.FC<MoveModalProps> = ({
                 <div className="space-y-2">
                   <label className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">Select Serials</label>
                   
-                  {selectedEntry.serialGroups.length === 0 || 
+                  {selectedEntry.serialGroups.length === 0 ||
                    selectedEntry.serialGroups.every(g => g.serialNumbers.length === 0) ? (
                     <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl">
                       <AlertCircle className="text-amber-500 mb-4" size={48} strokeWidth={1.5} />
                       <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">No available units to move</p>
-                      <button 
+                      <button
                         onClick={() => setStep(1)}
                         className="mt-4 text-blue-500 text-xs font-black uppercase hover:underline"
                       >

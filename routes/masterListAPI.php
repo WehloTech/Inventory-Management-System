@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MasterlistController;
 use App\Http\Controllers\StockInController;
+use App\Http\Controllers\PasscodeController; 
+use App\Http\Controllers\ConsumableController;
 
 // ==============================
 // MASTERLIST API
@@ -59,8 +61,6 @@ Route::delete('/stockin/entry', [StockInController::class, 'deleteStockInEntry']
 Route::get('/stockin/items-for-move/{mainCategoryId}', [StockInController::class, 'getItemsForMove']);
 
 
-
-
 // ==============================
 // STOCK OUT API 
 // ==============================
@@ -90,3 +90,40 @@ Route::get('/stockdamage/dashboard/{mainCategoryId}', [StockInController::class,
 
 // Update remarks for a stock damage entry
 Route::post('/stockdamage/update-remarks', [StockInController::class, 'updateDamageRemarks']);
+
+
+
+
+// ==============================
+// PASSCODE API
+// ==============================
+
+Route::post('/passcode/verify', [PasscodeController::class, 'verify']);        // 👈 add this
+Route::post('/passcode/forgot', [PasscodeController::class, 'sendResetCode']);
+Route::post('/passcode/verify-otp', [PasscodeController::class, 'verifyOtp']);
+Route::post('/passcode/reset', [PasscodeController::class, 'resetPasscode']);
+
+
+
+
+// ==============================
+// CONSUMABLES API
+// ==============================
+
+// Get all consumable items by main category
+Route::get('/consumable/items/{mainCategoryId}', [ConsumableController::class, 'getConsumables']);
+
+// Add new consumable item (or add quantity to existing)
+Route::post('/consumable/add', [ConsumableController::class, 'addConsumable']);
+
+// Deduct quantity from a consumable item
+Route::post('/consumable/deduct', [ConsumableController::class, 'deductConsumable']);
+
+// Delete a consumable item row
+Route::delete('/consumable/item/{id}', [ConsumableController::class, 'deleteConsumable']);
+
+// Get logs for a specific consumable item
+Route::get('/consumable/logs/{consumableItemId}', [ConsumableController::class, 'getConsumableLogs']);
+
+// Update remarks for a consumable log
+Route::post('/consumable/update-remarks', [ConsumableController::class, 'updateConsumableRemarks']);

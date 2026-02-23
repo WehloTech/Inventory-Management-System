@@ -96,4 +96,14 @@ Route::prefix('inventory/{system}')->group(function () {
             'system' => $system,
         ]);
     })->name('inventory.deployment')->where('system', 'usher|usherette|wehlo|hoclomac|shared');
+
+    Route::get('/consumable', function ($system) {
+        $categoryMap = ['usher' => 1, 'usherette' => 2, 'wehlo' => 3, 'hoclomac' => 4, 'shared' => 5];
+        return Inertia::render('Inventory/Consumable', [
+            'mainCategoryId' => $categoryMap[$system] ?? 1,
+            'system' => $system,
+        ]);
+    })->name('inventory.consumable')->where('system', 'usher|usherette|wehlo|hoclomac|shared');
+
 });
+

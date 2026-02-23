@@ -40,25 +40,51 @@ class MasterlistController extends Controller
     - Action(View)
     ======================================================
     */
-    public function getBoxesByCategory($mainCategoryId)
-    {
-        $categoryIds = $this->getCategoryIds((int) $mainCategoryId);
+public function getBoxesByCategory($mainCategoryId)
+{
+    $categoryIds = $this->getCategoryIds((int) $mainCategoryId);
+    $search = request()->query('search', '');
 
-        $boxes = Box::whereIn('main_category_id', $categoryIds)->get()->map(function ($box) {
-            $categoryQty = Item::where('box_id', $box->id)
-                ->distinct('subcategory_id')
-                ->count('subcategory_id');
+    $boxes = Box::whereIn('main_category_id', $categoryIds)->get()->map(function ($box) {
+        $categoryQty = Item::where('box_id', $box->id)
+            ->distinct('subcategory_id')
+            ->count('subcategory_id');
 
-            return [
-                'id'                => $box->id,
-                'box_name'          => $box->name,
-                'category_quantity' => $categoryQty,
-                'main_category'     => $this->getCategoryName($box->main_category_id), // ✅ NEW
-            ];
-        });
+        // Get item/subcategory names inside this box
+        $itemNames = Item::where('box_id', $box->id)
+            ->with('subcategory')
+            ->get()
+            ->pluck('subcategory.name')
+            ->unique()
+            ->filter()
+            ->values()
+            ->toArray();
 
-        return response()->json($boxes);
+        return [
+            'id'                => $box->id,
+            'box_name'          => $box->name,
+            'category_quantity' => $categoryQty,
+            'main_category'     => $this->getCategoryName($box->main_category_id),
+            'item_names'        => $itemNames, // ← new field
+        ];
+    });
+
+    // Filter by search if provided
+    if ($search) {
+        $search = strtolower($search);
+        $boxes = $boxes->filter(function ($box) use ($search) {
+            // Match box name
+            if (str_contains(strtolower($box['box_name']), $search)) return true;
+            // Match any item name inside the box
+            foreach ($box['item_names'] as $itemName) {
+                if (str_contains(strtolower($itemName), $search)) return true;
+            }
+            return false;
+        })->values();
     }
+
+    return response()->json($boxes);
+}
 
 /*
 ======================================================
