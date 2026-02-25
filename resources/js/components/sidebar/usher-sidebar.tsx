@@ -193,7 +193,6 @@ export function USHERSidebar({ system }: USHERSidebarProps) {
                       </Link>
                     ) : (
                       <div
-                        aria-disabled="true"
                         className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-500 cursor-not-allowed"
                       >
                         {item.icon && (

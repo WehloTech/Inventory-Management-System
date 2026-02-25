@@ -188,9 +188,10 @@ class StockInController extends Controller
 
                         // Create stock log
                         StockLog::create([
-                            'item_id' => $item->id,
+                            'item_id'     => $item->id,
+                            'from_status' => null,            // brand new item, no previous state
                             'action_type' => 'STOCK_IN',
-                            'remarks' => $itemData['remarks'] ?? null,
+                            'remarks'     => $itemData['remarks'] ?? null,
                         ]);
 
                         $createdItems[] = $item;
@@ -259,6 +260,7 @@ class StockInController extends Controller
                             'serial'    => $log->item->serial_number,
                             'boxName'   => $log->item->box->name,
                             'batchTime' => $log->created_at->toIso8601String(),
+                            'fromStatus' => $log->from_status ?? null, 
                         ])->toArray(),
                         'supplierId'   => (string) $supplierId,
                         'supplierName' => $supplier ? $supplier->name : 'Unknown',
@@ -316,6 +318,7 @@ class StockInController extends Controller
                 $item = Item::where('serial_number', $serialNumber)->first();
                 if (!$item) continue;
 
+                $fromStatus = $item->status; 
                 $item->status = $request->status;
 
                 // Update box if moving back to stock in
@@ -327,6 +330,7 @@ class StockInController extends Controller
 
                 StockLog::create([
                     'item_id' => $item->id,
+                    'from_status' => $fromStatus,
                     'action_type' => $request->status === 'IN_STOCK' ? 'STOCK_IN' : $request->status,
                     'remarks' => $request->remarks,
                 ]);
@@ -530,6 +534,7 @@ class StockInController extends Controller
                             'serial'    => $log->item->serial_number,
                             'boxName'   => $log->item->box->name,
                             'batchTime' => $log->created_at->toIso8601String(),
+                            'fromStatus' => $log->from_status ?? null, 
                         ])->toArray(),
                         'supplierId'   => (string) $supplierId,
                         'supplierName' => $supplier ? $supplier->name : 'Unknown',
@@ -628,6 +633,7 @@ public function getInUseDashboard($mainCategoryId)
                         'serial'    => $log->item->serial_number,
                         'boxName'   => $log->item->box->name,
                         'batchTime' => $log->created_at->toIso8601String(),
+                        'fromStatus' => $log->from_status ?? null, 
                     ])->toArray(),
                     'supplierId'   => (string) $supplierId,
                     'supplierName' => $supplier ? $supplier->name : 'Unknown',
@@ -744,6 +750,7 @@ public function getStockDamageDashboard($mainCategoryId)
                         'serial'    => $log->item->serial_number,
                         'boxName'   => $log->item->box->name,
                         'batchTime' => $log->created_at->toIso8601String(),
+                        'fromStatus' => $log->from_status ?? null, 
                     ])->toArray(),
                     'supplierId'   => (string) $supplierId,
                     'supplierName' => $supplier ? $supplier->name : 'Unknown',

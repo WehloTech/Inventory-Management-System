@@ -237,6 +237,7 @@ export const MoveModal: React.FC<MoveModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           serialNumbers: Array.from(selectedSerials),
+          fromStatus: currentStatus ?? null,   // ← add this
           status: statusMap[location],
           remarks: remarks || null,
           boxId: location === 'Stock in' ? selectedBoxId : null,
