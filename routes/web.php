@@ -105,5 +105,12 @@ Route::prefix('inventory/{system}')->group(function () {
         ]);
     })->name('inventory.consumable')->where('system', 'usher|usherette|wehlo|hoclomac|shared');
 
-});
+    Route::get('/log-history', function ($system) {
+        $categoryMap = ['usher' => 1, 'usherette' => 2, 'wehlo' => 3, 'hoclomac' => 4, 'shared' => 5];
+        return Inertia::render('Inventory/LogHistory', [
+            'mainCategoryId' => $categoryMap[$system] ?? 1,
+            'system' => $system,
+        ]);
+    })->name('inventory.log-history')->where('system', 'usher|usherette|wehlo|hoclomac|shared');
 
+});
