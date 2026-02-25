@@ -290,18 +290,27 @@ const LogHistory: React.FC<LogHistoryProps> = ({ mainCategoryId, system }) => {
                         {paginatedEntries.map((entry) => (
                           <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700">
 
-                            {/* Date & Time */}
-                            <td className="px-4 py-4 text-sm text-gray-900 dark:text-white text-center">
-                              <div className="font-medium">
-                                {new Date(entry.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                              </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {entry.time
-                                  ? new Date(`1970-01-01T${entry.time}`).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-                                  : '—'}
-                              </div>
-                            </td>
-
+                          {/* Date & Time */}
+                          <td className="px-4 py-4 text-sm text-gray-900 dark:text-white text-center">
+                            <div className="font-medium">
+                              {new Date(`${entry.date}T${entry.time ?? '00:00:00'}Z`).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                timeZone: 'Asia/Manila',
+                              })}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {entry.time
+                                ? new Date(`${entry.date}T${entry.time}Z`).toLocaleTimeString('en-US', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true,
+                                    timeZone: 'Asia/Manila',
+                                  })
+                                : '—'}
+                            </div>
+                          </td>
                             {/* Item Name */}
                             <td className="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium text-center">
                               {entry.itemName}
