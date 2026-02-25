@@ -21,10 +21,9 @@ import {
   PackageMinus,
   Wrench,
   ShieldAlert,
-  ShoppingCart,
-  Truck,
   BarChart3,
   FlaskConical,
+  History,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/themetoggle';
 
@@ -74,16 +73,9 @@ const getNavItems = (system: string): NavItem[] => [
     ],
   },
   {
-    title: 'Purchase Order',
-    icon: ShoppingCart,
-  },
-  {
-    title: 'Purchase Request',
-    icon: ShoppingCart,
-  },
-  {
-    title: 'Deployment',
-    icon: Truck,
+    title: 'Log History',
+    href: `/inventory/${system}/log-history`,
+    icon: History,
   },
 ];
 
