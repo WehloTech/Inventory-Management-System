@@ -23,7 +23,7 @@ class ItemController extends Controller
 
         // Optional: create initial stock log
         // $item->stockLogs()->create([
-        //     'type' => 'IN',
+        //     'type' => 'IN', 
         //     'quantity' => $request->quantity ?? 0,
         //     'date' => now(),
         //     'notes' => 'Initial stock'
