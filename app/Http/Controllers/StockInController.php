@@ -821,5 +821,60 @@ public function getStockDamageDashboard($mainCategoryId)
         }
     }
 
+    /*
+    ======================================================
+    GET LOG HISTORY
+    ======================================================
+    */
+    public function getLogHistory($mainCategoryId)
+    {
+        try {
+            $categoryIds = $this->getCategoryIds((int) $mainCategoryId);
+
+            $logs = StockLog::with(['item.subcategory', 'item.box', 'item.supplier'])
+                ->whereHas('item.box', function ($query) use ($categoryIds) {
+                    $query->whereIn('main_category_id', $categoryIds);
+                })
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $statusLabels = [
+                'IN_STOCK'  => 'Stock In',
+                'IN_USE'    => 'In Use',
+                'STOCK_OUT' => 'Stock Out',
+                'DAMAGED'   => 'Damaged',
+            ];
+
+            $actionLabels = [
+                'STOCK_IN'  => 'Stock In',
+                'IN_USE'    => 'In Use',
+                'STOCK_OUT' => 'Stock Out',
+                'DAMAGED'   => 'Damaged',
+            ];
+
+            $result = $logs->map(function ($log) use ($statusLabels, $actionLabels) {
+                return [
+                    'id'           => (string) $log->id,
+                    'date'         => $log->created_at->format('Y-m-d'),
+                    'time'         => $log->created_at->format('H:i:s'),
+                    'itemName'     => $log->item->subcategory->name ?? '—',
+                    'serialNumber' => $log->item->serial_number ?? '—',
+                    'from'         => isset($log->from_status)
+                                        ? ($statusLabels[$log->from_status] ?? $log->from_status)
+                                        : '—',
+                    'to'           => $actionLabels[$log->action_type] ?? $log->action_type,
+                    'remarks'      => $log->remarks ?? '',
+                ];
+            });
+
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to fetch log history',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
  
 }

@@ -346,33 +346,28 @@ const LogHistory: React.FC<LogHistoryProps> = ({ mainCategoryId, system }) => {
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex-shrink-0 flex items-center justify-center gap-1 py-3 flex-wrap">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
-                >&lt;</button>
-                <div className="flex gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-2.5 py-1.5 border-2 font-semibold rounded transition-colors text-xs ${
-                        currentPage === page
-                          ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900'
-                          : 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
-                    >{page}</button>
+            {totalPages > 1 && (() => {
+              const WINDOW = 6;
+              let startPage = Math.max(1, currentPage - Math.floor(WINDOW / 2));
+              let endPage = startPage + WINDOW - 1;
+              if (endPage > totalPages) { endPage = totalPages; startPage = Math.max(1, endPage - WINDOW + 1); }
+              const pages = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+              const btnClass = "px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs";
+              const activeBtnClass = "px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-semibold transition-colors text-xs";
+              return (
+                <div className="flex-shrink-0 flex items-center justify-center gap-1 py-3 flex-wrap">
+                  <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className={btnClass}>«</button>
+                  <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className={btnClass}>‹ Prev</button>
+                  {startPage > 1 && <span className="px-1 text-gray-500 text-xs">…</span>}
+                  {pages.map((page) => (
+                    <button key={page} onClick={() => setCurrentPage(page)} className={currentPage === page ? activeBtnClass : btnClass}>{page}</button>
                   ))}
+                  {endPage < totalPages && <span className="px-1 text-gray-500 text-xs">…</span>}
+                  <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className={btnClass}>Next ›</button>
+                  <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className={btnClass}>»</button>
                 </div>
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-2.5 py-1.5 border-2 border-gray-900 dark:border-gray-100 rounded text-gray-900 dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
-                >&gt;</button>
-              </div>
-            )}
+              );
+            })()}
           </div>
         </main>
       </SidebarProvider>

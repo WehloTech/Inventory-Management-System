@@ -127,3 +127,11 @@ Route::get('/consumable/logs/{consumableItemId}', [ConsumableController::class, 
 
 // Update remarks for a consumable log
 Route::post('/consumable/update-remarks', [ConsumableController::class, 'updateConsumableRemarks']);
+
+
+
+// ==============================
+// LOG HISTORY API
+// ==============================
+Route::get('/log-history/{mainCategoryId}', [StockInController::class, 'getLogHistory']);
+
