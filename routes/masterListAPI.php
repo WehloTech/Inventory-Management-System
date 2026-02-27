@@ -102,7 +102,10 @@ Route::post('/passcode/verify', [PasscodeController::class, 'verify']);        /
 Route::post('/passcode/forgot', [PasscodeController::class, 'sendResetCode']);
 Route::post('/passcode/verify-otp', [PasscodeController::class, 'verifyOtp']);
 Route::post('/passcode/reset', [PasscodeController::class, 'resetPasscode']);
-
+Route::post('/auth/login',          [PasscodeController::class, 'login']);
+Route::post('/auth/logout',         [PasscodeController::class, 'logout']);
+Route::get('/auth/check',           [PasscodeController::class, 'checkSession']);
+Route::post('/passcode/forgot-login', [PasscodeController::class, 'forgotLogin']);
 
 
 

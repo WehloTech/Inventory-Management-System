@@ -95,4 +95,70 @@ class PasscodeController extends Controller
 
         return response()->json(['message' => 'Passcode updated successfully.']);
     }
+
+    // ── Login with email + passcode ──
+    public function login(Request $request)
+    {
+        $request->validate([
+            'email'    => 'required|email',
+            'passcode' => 'required|string',
+        ]);
+
+        $adminEmail   = $this->getSetting('admin_email');
+        $adminPasscode = $this->getSetting('admin_passcode');
+
+        if ($request->email !== $adminEmail) {
+            return response()->json(['message' => 'Invalid email or passcode.'], 403);
+        }
+
+        if (!$adminPasscode || !Hash::check($request->passcode, $adminPasscode)) {
+            return response()->json(['message' => 'Invalid email or passcode.'], 403);
+        }
+
+        // Store login in session
+        session(['admin_logged_in' => true]);
+
+        return response()->json(['message' => 'Login successful.']);
+    }
+
+    // ── Logout ──
+    public function logout(Request $request)
+    {
+        session()->forget('admin_logged_in');
+        return response()->json(['message' => 'Logged out.']);
+    }
+
+    // ── Check if logged in ──
+    public function checkSession(Request $request)
+    {
+        if (session('admin_logged_in')) {
+            return response()->json(['loggedIn' => true]);
+        }
+        return response()->json(['loggedIn' => false], 401);
+    }
+    // ── Auto-send OTP to stored admin email (no email input needed) ──
+    public function forgotLogin(Request $request)
+    {
+        $adminEmail = $this->getSetting('admin_email');
+
+        if (!$adminEmail) {
+            return response()->json(['message' => 'No admin email configured.'], 500);
+        }
+
+        $otp = rand(100000, 999999);
+        Cache::put('passcode_reset_otp', $otp, now()->addMinutes(10));
+
+        Mail::raw(
+            "Your passcode reset code is: {$otp}\n\nThis code expires in 10 minutes.",
+            function ($message) use ($adminEmail) {
+                $message->to($adminEmail)->subject('Passcode Reset Code');
+            }
+        );
+
+        // Return masked email so frontend can show it
+        [$local, $domain] = explode('@', $adminEmail);
+        $masked = substr($local, 0, min(7, strlen($local))) . '***@' . $domain;
+
+        return response()->json(['maskedEmail' => $masked]);
+    }
 }

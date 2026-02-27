@@ -24,6 +24,7 @@ import {
   BarChart3,
   FlaskConical,
   History,
+  LogOut,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/themetoggle';
 
@@ -110,6 +111,11 @@ export function USHERSidebar({ system }: USHERSidebarProps) {
     );
   };
 
+  const handleLogout = async () => {
+    await fetch('/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  };
+
   return (
     <SidebarComponent className="bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col">
       {/* ── Header ───────────────────────────────────────────── */}
@@ -184,9 +190,7 @@ export function USHERSidebar({ system }: USHERSidebarProps) {
                         <span>{item.title}</span>
                       </Link>
                     ) : (
-                      <div
-                        className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-500 cursor-not-allowed"
-                      >
+                      <div className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-500 cursor-not-allowed">
                         {item.icon && (
                           <span className="flex-shrink-0 text-gray-400 dark:text-gray-500">
                             <item.icon size={18} />
@@ -239,7 +243,7 @@ export function USHERSidebar({ system }: USHERSidebarProps) {
       </SidebarContent>
 
       {/* ── Footer ───────────────────────────────────────────── */}
-      <SidebarFooter className="px-3 py-3 border-t border-gray-100 dark:border-gray-800">
+      <SidebarFooter className="px-3 py-3 border-t border-gray-100 dark:border-gray-800 space-y-1">
         <Link
           href="/"
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all"
@@ -247,6 +251,14 @@ export function USHERSidebar({ system }: USHERSidebarProps) {
           <ArrowLeftRight size={17} className="text-gray-400" />
           <span>Switch System</span>
         </Link>
+
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all w-full"
+        >
+          <LogOut size={17} />
+          <span>Logout</span>
+        </button>
       </SidebarFooter>
     </SidebarComponent>
   );
