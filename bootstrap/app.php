@@ -22,6 +22,15 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        $middleware->alias([
+            'admin.auth' => \App\Http\Middleware\AdminAuth::class,
+        ]);
+            // ← ADD THIS
+        $middleware->validateCsrfTokens(except: [
+            'auth/login',
+            'auth/logout',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
