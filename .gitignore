@@ -29,3 +29,5 @@ yarn-error.log
 /database/database.sqlite
 
 .env.docker
+
+/laravel
