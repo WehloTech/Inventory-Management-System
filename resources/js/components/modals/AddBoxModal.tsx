@@ -49,8 +49,8 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
 
     if (!boxFormData.boxNumber.trim()) {
       setBoxError('Box name cannot be empty');
@@ -59,11 +59,15 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
     }
 
     setIsSubmitting(true);
+    setShowBoxError(false);
 
     try {
       const response = await fetch('/api/masterlist/box', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         body: JSON.stringify({
           name: boxFormData.boxNumber,
           main_category_id: mainCategoryId,
@@ -73,17 +77,24 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
       const result = await response.json();
 
       if (response.ok) {
-        const newBox = result.data;
+        // Formats the response from the controller for the UI
+        const newBoxData = result.data;
         const formattedBox: InventoryBox = {
-          id: newBox.id,
-          box_name: newBox.name,
-          category_quantity: 0,
-          main_category: systemDisplayName,
+          id: newBoxData.id,
+          box_name: newBoxData.box_name,
+          category_quantity: newBoxData.category_quantity,
+          main_category: newBoxData.main_category,
         };
+
         handleClose();
         if (onSuccess) onSuccess(formattedBox);
       } else {
-        setBoxError(result.message || 'Failed to create box');
+        // Handle Laravel validation errors (422) or custom errors
+        const errorMessage = result.errors 
+          ? Object.values(result.errors).flat()[0] as string 
+          : result.message || 'Failed to create box';
+        
+        setBoxError(errorMessage);
         setShowBoxError(true);
       }
     } catch (error) {
@@ -97,7 +108,6 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
 
   if (!isOpen) return null;
 
-  // ── Show PasscodeGate first ──
   if (!passcodeVerified) {
     return (
       <PasscodeGate
@@ -112,7 +122,6 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
     <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-md flex flex-col border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-300 overflow-hidden">
         
-        {/* Header */}
         <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 dark:border-slate-800">
           <div>
             <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none italic">
@@ -128,9 +137,7 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
           </button>
         </div>
 
-        {/* Body */}
         <form onSubmit={handleSubmit} className="px-8 py-8 space-y-6">
-          
           {showBoxError && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 flex items-center gap-3 animate-in slide-in-from-top-2">
               <AlertCircle className="text-red-500 shrink-0" size={18} />
@@ -168,10 +175,9 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
           </div>
         </form>
 
-        {/* Footer */}
         <div className="px-8 py-6 bg-slate-50 dark:bg-slate-800/50 flex flex-col gap-3">
           <button
-            onClick={handleSubmit}
+            onClick={() => handleSubmit()}
             disabled={isSubmitting}
             className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[1.5rem] font-black transition-all flex items-center justify-center shadow-xl active:scale-[0.98] uppercase tracking-[0.2em] text-xs disabled:opacity-50"
           >
@@ -185,7 +191,6 @@ export const AddBoxModal: React.FC<AddBoxModalProps> = ({
             Cancel
           </button>
         </div>
-
       </div>
     </div>
   );

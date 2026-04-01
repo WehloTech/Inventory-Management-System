@@ -27,3 +27,5 @@ yarn-error.log
 /.vscode
 /.zed
 /database/database.sqlite
+
+.env.docker

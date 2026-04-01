@@ -21,15 +21,15 @@ class MasterlistController extends Controller
 
     // NEW HELPER
     private function getCategoryName(int $mainCategoryId): string
-    {
-        return match($mainCategoryId) {
-            1 => 'Usher',
-            2 => 'Usherette',
-            3 => 'Wehlo',
-            4 => 'Hoclomac',
-            default => 'Unknown',
-        };
-    }
+{
+    return match($mainCategoryId) {
+        1 => 'USHER',
+        3 => 'HOCLOMAC',
+        4 => 'USHERETTE',
+        5 => 'WEHLO',
+        default => 'Unknown',
+    };
+}
 
     /*
     ======================================================
@@ -161,33 +161,38 @@ GET SUBCATEGORY SUMMARY PER BOX
     ======================================================
     */
     public function addBox(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'main_category_id' => 'required|exists:main_categories,id'
-        ]);
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'main_category_id' => 'required|integer'
+    ]);
 
-        // Check if box with same name already exists in this category
-        $exists = Box::where('name', $request->name)
-                    ->where('main_category_id', $request->main_category_id)
-                    ->exists();
-        
-        if ($exists) {
-            return response()->json([
-                'message' => 'Box ID already has been taken'
-            ], 422); // 422 Unprocessable Entity
-        }
+    // We do the check manually to ensure no duplicates
+    $exists = Box::where('name', $request->name)
+                ->where('main_category_id', $request->main_category_id)
+                ->exists();
 
-        $box = Box::create([
-            'name' => $request->name,
-            'main_category_id' => $request->main_category_id
-        ]);
-
-        return response()->json([
-            'message' => 'Box created successfully',
-            'data' => $box
-        ], 201);
+    if ($exists) {
+        return response()->json(['message' => 'Box name already exists in this category'], 422);
     }
+
+    // Use the Model so it returns a full object for the frontend
+    $box = Box::create([
+        'name' => $request->name,
+        'main_category_id' => $request->main_category_id
+    ]);
+
+    return response()->json([
+        'message' => 'Box created successfully',
+        'data' => [
+            'id' => $box->id,
+            'box_name' => $box->name,
+            'main_category' => $this->getCategoryName((int)$box->main_category_id),
+            'category_quantity' => 0,
+            'item_names' => []
+        ]
+    ], 201);
+}
    /*
     ======================================================
     DELETE BOX

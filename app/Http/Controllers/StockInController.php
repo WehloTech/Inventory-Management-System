@@ -146,7 +146,7 @@ class StockInController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.remarks' => 'nullable|string',
             'items.*.serialGroups' => 'required|array|min:1',
-            'items.*.serialGroups.*.serialNumbers' => 'required|array|min:1',
+            'items.*.serialGroups.*.serialNumbers' => 'nullable|array',
             'items.*.serialGroups.*.supplierId' => 'required|exists:suppliers,id',
         ]);
 
@@ -159,7 +159,6 @@ class StockInController extends Controller
                 // Find or create subcategory (itemName = subcategory name)
                 $box = Box::findOrFail($itemData['boxId']);
 
-                // AFTER
                 $subcategory = Subcategory::firstOrCreate([
                     'name' => $itemData['itemName'],
                 ]);
@@ -168,28 +167,37 @@ class StockInController extends Controller
 
                 // Create items for each serial number group
                 foreach ($itemData['serialGroups'] as $group) {
-                    foreach ($group['serialNumbers'] as $serialNumber) {
-                        // Check if serial number already exists
-                        if (Item::where('serial_number', $serialNumber)->exists()) {
-                            DB::rollBack();
-                            return response()->json([
-                                'message' => "Serial number {$serialNumber} already exists",
-                            ], 422);
+                    $serialNumbers = $group['serialNumbers'] ?? [];
+
+                    foreach ($serialNumbers as $serialNumber) {
+                        $sn = trim($serialNumber);
+
+                        if ($sn === '') {
+                            // Blank — auto-generate a unique SN
+                            $sn = $this->generateSerialNumber($itemData['itemName']);
+                        } else {
+                            // Manually entered — reject duplicates
+                            if (Item::where('serial_number', $sn)->exists()) {
+                                DB::rollBack();
+                                return response()->json([
+                                    'message' => "Serial number {$sn} already exists",
+                                ], 422);
+                            }
                         }
 
                         // Create item
                         $item = Item::create([
                             'subcategory_id' => $subcategory->id,
-                            'box_id' => $box->id,
-                            'supplier_id' => $group['supplierId'],
-                            'serial_number' => $serialNumber,
-                            'status' => 'IN_STOCK',
+                            'box_id'         => $box->id,
+                            'supplier_id'    => $group['supplierId'],
+                            'serial_number'  => $sn,
+                            'status'         => 'IN_STOCK',
                         ]);
 
                         // Create stock log
                         StockLog::create([
                             'item_id'     => $item->id,
-                            'from_status' => null,            // brand new item, no previous state
+                            'from_status' => null,
                             'action_type' => 'STOCK_IN',
                             'remarks'     => $itemData['remarks'] ?? null,
                         ]);
@@ -220,6 +228,38 @@ class StockInController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Generate a unique serial number for an item.
+     * Format: {PREFIX}-{YYYYMMDD}-{SEQ}  e.g. WIRE-20260324-001
+     */
+    private function generateSerialNumber(string $itemName): string
+    {
+        // Use first word of item name, uppercase, max 6 chars
+        $words  = preg_split('/[\s_\-]+/', trim($itemName));
+        $prefix = strtoupper(substr($words[0] ?? 'ITEM', 0, 6));
+        $date   = now()->format('Ymd');
+        $base   = "{$prefix}-{$date}";
+
+        // Find the highest existing sequence for this prefix+date
+        $latest = Item::where('serial_number', 'like', "{$base}-%")
+            ->orderBy('serial_number', 'desc')
+            ->value('serial_number');
+
+        $seq = 1;
+        if ($latest) {
+            $parts = explode('-', $latest);
+            $seq   = ((int) end($parts)) + 1;
+        }
+
+        // Loop to handle any race-condition collisions
+        do {
+            $sn = "{$base}-" . str_pad($seq, 3, '0', STR_PAD_LEFT);
+            $seq++;
+        } while (Item::where('serial_number', $sn)->exists());
+
+        return $sn;
     }
 
     /*
