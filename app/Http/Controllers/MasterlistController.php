@@ -47,11 +47,13 @@ public function getBoxesByCategory($mainCategoryId)
 
     $boxes = Box::whereIn('main_category_id', $categoryIds)->get()->map(function ($box) {
         $categoryQty = Item::where('box_id', $box->id)
+            ->where('status', 'IN_STOCK')
             ->distinct('subcategory_id')
             ->count('subcategory_id');
 
         // Get item/subcategory names inside this box
         $itemNames = Item::where('box_id', $box->id)
+            ->where('status', 'IN_STOCK')
             ->with('subcategory')
             ->get()
             ->pluck('subcategory.name')

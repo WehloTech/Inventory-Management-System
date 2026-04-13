@@ -277,6 +277,9 @@ class StockInController extends Controller
                 ->whereHas('item.box', function ($query) use ($categoryIds) {
                     $query->whereIn('main_category_id', $categoryIds); // ✅ CHANGED
                 })
+                ->whereHas('item', function ($query) {
+                    $query->where('status', 'IN_STOCK');
+                })
                 ->get();
 
             $grouped = $stockInLogs->groupBy(function ($log) {
@@ -552,6 +555,9 @@ class StockInController extends Controller
                 ->whereHas('item.box', function ($query) use ($categoryIds) {
                     $query->whereIn('main_category_id', $categoryIds);
                 })
+                ->whereHas('item', function ($query) {
+                    $query->where('status', 'STOCK_OUT');
+                })
                 ->get();
 
             $grouped = $stockOutLogs->groupBy(function ($log) {
@@ -650,6 +656,9 @@ public function getInUseDashboard($mainCategoryId)
             ->where('action_type', 'IN_USE')
             ->whereHas('item.box', function ($query) use ($categoryIds) {
                 $query->whereIn('main_category_id', $categoryIds);
+            })
+            ->whereHas('item', function ($query) {
+                $query->where('status', 'IN_USE');
             })
             ->get();
 
